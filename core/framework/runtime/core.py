@@ -56,6 +56,8 @@ class Runtime:
 
     def __init__(self, storage_path: str | Path):
         self.storage = FileStorage(storage_path)
+        # Thread-local storage for concurrent safety
+        self._local = threading.local()
         self._current_run: Run | None = None
         self._current_node: str = "unknown"
 
@@ -122,9 +124,20 @@ class Runtime:
         self._current_node = node_id
 
     @property
-    def current_run(self) -> Run | None:
-        """Get the current run (for inspection)."""
-        return self._current_run
+    def _current_run(self):
+        return getattr(self._local, 'current_run', None)
+
+    @_current_run.setter
+    def _current_run(self, value):
+        self._local.current_run = value
+
+    @property
+    def _current_node(self):
+        return getattr(self._local, 'current_node', 'unknown')
+
+    @_current_node.setter
+    def _current_node(self, value):
+        self._local.current_node = value
 
     # === DECISION RECORDING ===
 
