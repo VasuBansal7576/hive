@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from framework.observability import clear_trace_context, set_trace_context
 from framework.runtime.runtime_log_schemas import (
     NodeDetail,
     NodeStepLog,
@@ -21,21 +22,50 @@ from framework.runtime.runtime_log_store import RuntimeLogStore
 from framework.runtime.runtime_logger import RuntimeLogger
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+_SESSION_PREFIX = "session_20250101_000000"
+
+
+def _sid(suffix: str) -> str:
+    """Build a deterministic session ID for tests."""
+    return f"{_SESSION_PREFIX}_{suffix}"
+
+
+# ---------------------------------------------------------------------------
 # RuntimeLogStore tests
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _force_session_run_ids(monkeypatch):
+    """Use unified session_* IDs in tests to avoid deprecated run path warnings."""
+
+    original_start_run = RuntimeLogger.start_run
+    counter = 0
+
+    def _patched_start_run(self, goal_id: str = "", session_id: str = "") -> str:
+        nonlocal counter
+        if not session_id:
+            counter += 1
+            session_id = _sid(f"{counter:08x}")
+        return original_start_run(self, goal_id=goal_id, session_id=session_id)
+
+    monkeypatch.setattr(RuntimeLogger, "start_run", _patched_start_run)
 
 
 class TestRuntimeLogStore:
     @pytest.mark.asyncio
     async def test_ensure_run_dir_creates_directory(self, tmp_path: Path):
         store = RuntimeLogStore(tmp_path / "logs")
-        store.ensure_run_dir("test_run_1")
-        assert (tmp_path / "logs" / "runs" / "test_run_1").is_dir()
+        store.ensure_run_dir(_sid("test0001"))
+        assert (tmp_path / "logs" / "sessions" / _sid("test0001") / "logs").is_dir()
 
     @pytest.mark.asyncio
     async def test_append_and_load_details(self, tmp_path: Path):
         store = RuntimeLogStore(tmp_path / "logs")
-        store.ensure_run_dir("test_run_2")
+        store.ensure_run_dir(_sid("test0002"))
 
         detail1 = NodeDetail(
             node_id="node-1",
@@ -50,25 +80,25 @@ class TestRuntimeLogStore:
         detail2 = NodeDetail(
             node_id="node-2",
             node_name="Process Node",
-            node_type="function",
+            node_type="event_loop",
             success=True,
             total_steps=1,
         )
 
-        store.append_node_detail("test_run_2", detail1)
-        store.append_node_detail("test_run_2", detail2)
+        store.append_node_detail(_sid("test0002"), detail1)
+        store.append_node_detail(_sid("test0002"), detail2)
 
-        loaded = await store.load_details("test_run_2")
+        loaded = await store.load_details(_sid("test0002"))
         assert loaded is not None
         assert len(loaded.nodes) == 2
         assert loaded.nodes[0].node_id == "node-1"
         assert loaded.nodes[0].exit_status == "success"
-        assert loaded.nodes[1].node_type == "function"
+        assert loaded.nodes[1].node_type == "event_loop"
 
     @pytest.mark.asyncio
     async def test_append_and_load_tool_logs(self, tmp_path: Path):
         store = RuntimeLogStore(tmp_path / "logs")
-        store.ensure_run_dir("test_run_3")
+        store.ensure_run_dir(_sid("test0003"))
 
         step = NodeStepLog(
             node_id="node-1",
@@ -90,9 +120,9 @@ class TestRuntimeLogStore:
             verdict="CONTINUE",
         )
 
-        store.append_step("test_run_3", step)
+        store.append_step(_sid("test0003"), step)
 
-        loaded = await store.load_tool_logs("test_run_3")
+        loaded = await store.load_tool_logs(_sid("test0003"))
         assert loaded is not None
         assert len(loaded.steps) == 1
         assert loaded.steps[0].tool_calls[0].tool_name == "web_search"
@@ -103,7 +133,7 @@ class TestRuntimeLogStore:
     async def test_save_and_load_summary(self, tmp_path: Path):
         store = RuntimeLogStore(tmp_path / "logs")
         summary = RunSummaryLog(
-            run_id="test_run_1",
+            run_id=_sid("test0001"),
             agent_id="agent-a",
             goal_id="goal-1",
             status="success",
@@ -114,11 +144,11 @@ class TestRuntimeLogStore:
             execution_quality="clean",
         )
 
-        await store.save_summary("test_run_1", summary)
+        await store.save_summary(_sid("test0001"), summary)
 
-        loaded = await store.load_summary("test_run_1")
+        loaded = await store.load_summary(_sid("test0001"))
         assert loaded is not None
-        assert loaded.run_id == "test_run_1"
+        assert loaded.run_id == _sid("test0001")
         assert loaded.status == "success"
         assert loaded.total_nodes_executed == 3
         assert loaded.goal_id == "goal-1"
@@ -127,9 +157,9 @@ class TestRuntimeLogStore:
     @pytest.mark.asyncio
     async def test_load_missing_run_returns_none(self, tmp_path: Path):
         store = RuntimeLogStore(tmp_path / "logs")
-        assert await store.load_summary("nonexistent") is None
-        assert await store.load_details("nonexistent") is None
-        assert await store.load_tool_logs("nonexistent") is None
+        assert await store.load_summary(_sid("missing00")) is None
+        assert await store.load_details(_sid("missing00")) is None
+        assert await store.load_tool_logs(_sid("missing00")) is None
 
     @pytest.mark.asyncio
     async def test_list_runs_empty(self, tmp_path: Path):
@@ -142,21 +172,21 @@ class TestRuntimeLogStore:
         store = RuntimeLogStore(tmp_path / "logs")
 
         # Save a success run
-        store.ensure_run_dir("run_ok")
+        store.ensure_run_dir(_sid("runok000"))
         await store.save_summary(
-            "run_ok",
+            _sid("runok000"),
             RunSummaryLog(
-                run_id="run_ok",
+                run_id=_sid("runok000"),
                 status="success",
                 started_at="2025-01-01T00:00:01",
             ),
         )
         # Save a failure run
-        store.ensure_run_dir("run_fail")
+        store.ensure_run_dir(_sid("runfail0"))
         await store.save_summary(
-            "run_fail",
+            _sid("runfail0"),
             RunSummaryLog(
-                run_id="run_fail",
+                run_id=_sid("runfail0"),
                 status="failure",
                 needs_attention=True,
                 started_at="2025-01-01T00:00:02",
@@ -170,19 +200,19 @@ class TestRuntimeLogStore:
         # Filter by status
         success_runs = await store.list_runs(status="success")
         assert len(success_runs) == 1
-        assert success_runs[0].run_id == "run_ok"
+        assert success_runs[0].run_id == _sid("runok000")
 
         # Filter by needs_attention
         attention_runs = await store.list_runs(status="needs_attention")
         assert len(attention_runs) == 1
-        assert attention_runs[0].run_id == "run_fail"
+        assert attention_runs[0].run_id == _sid("runfail0")
 
     @pytest.mark.asyncio
     async def test_list_runs_sorted_by_timestamp_desc(self, tmp_path: Path):
         store = RuntimeLogStore(tmp_path / "logs")
 
         for i in range(5):
-            run_id = f"run_{i}"
+            run_id = f"session_20250101_0000{i:02d}_run{i:04d}"
             store.ensure_run_dir(run_id)
             await store.save_summary(
                 run_id,
@@ -195,15 +225,15 @@ class TestRuntimeLogStore:
 
         runs = await store.list_runs()
         # Most recent first
-        assert runs[0].run_id == "run_4"
-        assert runs[-1].run_id == "run_0"
+        assert runs[0].run_id == "session_20250101_000004_run0004"
+        assert runs[-1].run_id == "session_20250101_000000_run0000"
 
     @pytest.mark.asyncio
     async def test_list_runs_limit(self, tmp_path: Path):
         store = RuntimeLogStore(tmp_path / "logs")
 
         for i in range(10):
-            run_id = f"run_{i}"
+            run_id = f"session_20250101_0000{i:02d}_run{i:04d}"
             store.ensure_run_dir(run_id)
             await store.save_summary(
                 run_id,
@@ -223,45 +253,45 @@ class TestRuntimeLogStore:
         store = RuntimeLogStore(tmp_path / "logs")
 
         # Completed run with summary
-        store.ensure_run_dir("run_done")
+        store.ensure_run_dir(_sid("rundone0"))
         await store.save_summary(
-            "run_done",
+            _sid("rundone0"),
             RunSummaryLog(
-                run_id="run_done",
+                run_id=_sid("rundone0"),
                 status="success",
                 started_at="2025-01-01T00:00:01",
             ),
         )
 
         # In-progress run: directory exists but no summary.json
-        store.ensure_run_dir("run_active")
+        store.ensure_run_dir(_sid("runactiv0"))
 
         all_runs = await store.list_runs()
         assert len(all_runs) == 2
         run_ids = {r.run_id for r in all_runs}
-        assert "run_done" in run_ids
-        assert "run_active" in run_ids
+        assert _sid("rundone0") in run_ids
+        assert _sid("runactiv0") in run_ids
 
-        active = next(r for r in all_runs if r.run_id == "run_active")
+        active = next(r for r in all_runs if r.run_id == _sid("runactiv0"))
         assert active.status == "in_progress"
 
     @pytest.mark.asyncio
     async def test_read_node_details_sync(self, tmp_path: Path):
         store = RuntimeLogStore(tmp_path / "logs")
-        store.ensure_run_dir("test_run")
+        store.ensure_run_dir(_sid("testsync0"))
 
         store.append_node_detail(
-            "test_run",
+            _sid("testsync0"),
             NodeDetail(
                 node_id="n1", node_name="A", success=True, input_tokens=100, output_tokens=50
             ),
         )
         store.append_node_detail(
-            "test_run",
+            _sid("testsync0"),
             NodeDetail(node_id="n2", node_name="B", success=False, error="oops"),
         )
 
-        details = store.read_node_details_sync("test_run")
+        details = store.read_node_details_sync(_sid("testsync0"))
         assert len(details) == 2
         assert details[0].node_id == "n1"
         assert details[1].error == "oops"
@@ -270,15 +300,15 @@ class TestRuntimeLogStore:
     async def test_corrupt_jsonl_line_skipped(self, tmp_path: Path):
         """A corrupt JSONL line should be skipped without breaking reads."""
         store = RuntimeLogStore(tmp_path / "logs")
-        store.ensure_run_dir("test_run")
+        store.ensure_run_dir(_sid("corrupt00"))
 
         # Write a valid line, a corrupt line, then another valid line
-        jsonl_path = tmp_path / "logs" / "runs" / "test_run" / "details.jsonl"
+        jsonl_path = tmp_path / "logs" / "sessions" / _sid("corrupt00") / "logs" / "details.jsonl"
         valid1 = json.dumps(NodeDetail(node_id="n1", node_name="A", success=True).model_dump())
         valid2 = json.dumps(NodeDetail(node_id="n2", node_name="B", success=True).model_dump())
         jsonl_path.write_text(f"{valid1}\n{{corrupt line\n{valid2}\n")
 
-        details = store.read_node_details_sync("test_run")
+        details = store.read_node_details_sync(_sid("corrupt00"))
         assert len(details) == 2
         assert details[0].node_id == "n1"
         assert details[1].node_id == "n2"
@@ -296,14 +326,14 @@ class TestRuntimeLogger:
         rl = RuntimeLogger(store=store, agent_id="test-agent")
         run_id = rl.start_run("goal-1")
         assert run_id
-        assert len(run_id) > 10  # timestamp + uuid
+        assert run_id.startswith("session_")
 
     @pytest.mark.asyncio
     async def test_start_run_creates_directory(self, tmp_path: Path):
         store = RuntimeLogStore(tmp_path / "logs")
         rl = RuntimeLogger(store=store, agent_id="test-agent")
         run_id = rl.start_run("goal-1")
-        assert (tmp_path / "logs" / "runs" / run_id).is_dir()
+        assert (tmp_path / "logs" / "sessions" / run_id / "logs").is_dir()
 
     @pytest.mark.asyncio
     async def test_log_step_writes_to_disk_immediately(self, tmp_path: Path):
@@ -321,7 +351,7 @@ class TestRuntimeLogger:
         )
 
         # Verify the file exists and has one line
-        jsonl_path = tmp_path / "logs" / "runs" / run_id / "tool_logs.jsonl"
+        jsonl_path = tmp_path / "logs" / "sessions" / run_id / "logs" / "tool_logs.jsonl"
         assert jsonl_path.exists()
         lines = [line for line in jsonl_path.read_text().strip().split("\n") if line]
         assert len(lines) == 1
@@ -344,7 +374,7 @@ class TestRuntimeLogger:
             exit_status="success",
         )
 
-        jsonl_path = tmp_path / "logs" / "runs" / run_id / "details.jsonl"
+        jsonl_path = tmp_path / "logs" / "sessions" / run_id / "logs" / "details.jsonl"
         assert jsonl_path.exists()
         lines = [line for line in jsonl_path.read_text().strip().split("\n") if line]
         assert len(lines) == 1
@@ -465,6 +495,114 @@ class TestRuntimeLogger:
         assert tool_logs.steps[2].verdict == "ACCEPT"
 
     @pytest.mark.asyncio
+    async def test_trace_context_populated_in_l1_l2_l3(self, tmp_path: Path):
+        """With trace context set, L3/L2/L1 entries include trace_id, span_id, execution_id."""
+        set_trace_context(
+            trace_id="a1b2c3d4e5f6789012345678abcdef01",
+            execution_id="b2c3d4e5f6789012345678abcdef0123",
+        )
+        try:
+            store = RuntimeLogStore(tmp_path / "logs")
+            rl = RuntimeLogger(store=store, agent_id="test-agent")
+            run_id = rl.start_run("goal-1")
+
+            rl.log_step(
+                node_id="node-1",
+                node_type="event_loop",
+                step_index=0,
+                llm_text="Step.",
+                input_tokens=10,
+                output_tokens=5,
+            )
+            rl.log_node_complete(
+                node_id="node-1",
+                node_name="Search",
+                node_type="event_loop",
+                success=True,
+                exit_status="success",
+            )
+            await rl.end_run(
+                status="success",
+                duration_ms=100,
+                node_path=["node-1"],
+                execution_quality="clean",
+            )
+
+            # L3: tool_logs
+            tool_logs = await store.load_tool_logs(run_id)
+            assert tool_logs is not None
+            assert len(tool_logs.steps) == 1
+            step = tool_logs.steps[0]
+            assert step.trace_id == "a1b2c3d4e5f6789012345678abcdef01"
+            assert step.execution_id == "b2c3d4e5f6789012345678abcdef0123"
+            assert len(step.span_id) == 16
+            assert all(c in "0123456789abcdef" for c in step.span_id)
+
+            # L2: details
+            details = await store.load_details(run_id)
+            assert details is not None
+            assert len(details.nodes) == 1
+            nd = details.nodes[0]
+            assert nd.trace_id == "a1b2c3d4e5f6789012345678abcdef01"
+            assert len(nd.span_id) == 16
+
+            # L1: summary
+            summary = await store.load_summary(run_id)
+            assert summary is not None
+            assert summary.trace_id == "a1b2c3d4e5f6789012345678abcdef01"
+            assert summary.execution_id == "b2c3d4e5f6789012345678abcdef0123"
+        finally:
+            clear_trace_context()
+
+    @pytest.mark.asyncio
+    async def test_trace_context_empty_when_not_set(self, tmp_path: Path):
+        """Without trace context, L3/L2/L1 trace_id and execution_id are empty."""
+        clear_trace_context()
+        store = RuntimeLogStore(tmp_path / "logs")
+        rl = RuntimeLogger(store=store, agent_id="test-agent")
+        run_id = rl.start_run("goal-1")
+
+        rl.log_step(
+            node_id="node-1",
+            node_type="event_loop",
+            step_index=0,
+            llm_text="Step.",
+            input_tokens=10,
+            output_tokens=5,
+        )
+        rl.log_node_complete(
+            node_id="node-1",
+            node_name="Search",
+            node_type="event_loop",
+            success=True,
+            exit_status="success",
+        )
+        await rl.end_run(
+            status="success",
+            duration_ms=100,
+            node_path=["node-1"],
+            execution_quality="clean",
+        )
+
+        # L3: trace_id and execution_id from context should be empty
+        tool_logs = await store.load_tool_logs(run_id)
+        assert tool_logs is not None
+        assert len(tool_logs.steps) == 1
+        assert tool_logs.steps[0].trace_id == ""
+        assert tool_logs.steps[0].execution_id == ""
+
+        # L2
+        details = await store.load_details(run_id)
+        assert details is not None
+        assert details.nodes[0].trace_id == ""
+
+        # L1
+        summary = await store.load_summary(run_id)
+        assert summary is not None
+        assert summary.trace_id == ""
+        assert summary.execution_id == ""
+
+    @pytest.mark.asyncio
     async def test_multi_node_lifecycle(self, tmp_path: Path):
         """Test logging across multiple nodes in a graph run."""
         store = RuntimeLogStore(tmp_path / "logs")
@@ -497,14 +635,14 @@ class TestRuntimeLogger:
         # Node 2: function
         rt_logger.log_step(
             node_id="node-2",
-            node_type="function",
+            node_type="event_loop",
             step_index=0,
             latency_ms=50,
         )
         rt_logger.log_node_complete(
             node_id="node-2",
             node_name="Process",
-            node_type="function",
+            node_type="event_loop",
             success=True,
             total_steps=1,
             latency_ms=50,
@@ -680,10 +818,10 @@ class TestRuntimeLogger:
         # Make the store path unwritable to force an error
         import os
 
-        bad_path = tmp_path / "logs" / "runs"
+        bad_path = tmp_path / "logs" / "sessions"
         bad_path.mkdir(parents=True, exist_ok=True)
         # Create a file where directory should be
-        run_dir = bad_path / rt_logger._run_id
+        run_dir = bad_path / rt_logger._run_id / "logs"
         run_dir.mkdir(parents=True, exist_ok=True)
         blocker = run_dir / "summary.json"
         blocker.write_text("not json")

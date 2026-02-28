@@ -46,6 +46,7 @@ coverage/
 
 # TypeScript
 *.tsbuildinfo
+vite.config.d.ts
 
 # Python
 __pycache__/
@@ -74,4 +75,6 @@ exports/*
 
 docs/github-issues/*
 core/tests/*dumps/*
+
 screenshots/*
+

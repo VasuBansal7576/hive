@@ -152,7 +152,7 @@ class TechNewsReporterAgent:
             max_tokens=self.config.max_tokens,
             loop_config={
                 "max_iterations": 50,
-                "max_tool_calls_per_turn": 10,
+                "max_tool_calls_per_turn": 30,
                 "max_history_tokens": 32000,
             },
         )
@@ -225,9 +225,7 @@ class TechNewsReporterAgent:
             session_state=session_state,
         )
 
-    async def run(
-        self, context: dict, session_state=None
-    ) -> ExecutionResult:
+    async def run(self, context: dict, session_state=None) -> ExecutionResult:
         """Run the agent (convenience method for single execution)."""
         await self.start()
         try:
