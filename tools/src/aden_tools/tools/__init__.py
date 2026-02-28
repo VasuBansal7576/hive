@@ -44,6 +44,7 @@ from .github_tool import register_tools as register_github
 from .hubspot_tool import register_tools as register_hubspot
 from .pdf_read_tool import register_tools as register_pdf_read
 from .runtime_logs_tool import register_tools as register_runtime_logs
+from .s3_tool import register_tools as register_s3
 from .slack_tool import register_tools as register_slack
 from .web_scrape_tool import register_tools as register_web_scrape
 from .web_search_tool import register_tools as register_web_search
@@ -79,6 +80,7 @@ def register_all_tools(
     register_hubspot(mcp, credentials=credentials)
     register_apollo(mcp, credentials=credentials)
     register_slack(mcp, credentials=credentials)
+    register_s3(mcp, credentials=credentials)
 
     # Register file system toolkits
     register_view_file(mcp)
@@ -178,6 +180,11 @@ def register_all_tools(
         "slack_send_dm",
         "slack_get_permalink",
         "slack_send_ephemeral",
+        "s3_upload",
+        "s3_download",
+        "s3_list",
+        "s3_delete",
+        "s3_check_credentials",
         # Block Kit & Views
         "slack_post_blocks",
         "slack_open_modal",
