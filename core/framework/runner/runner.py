@@ -1305,6 +1305,8 @@ class AgentRunner:
             return "REPLICATE_API_KEY"
         elif model_lower.startswith("together/"):
             return "TOGETHER_API_KEY"
+        elif model_lower.startswith("minimax/") or model_lower.startswith("minimax-"):
+            return "MINIMAX_API_KEY"
         else:
             # Default: assume OpenAI-compatible
             return "OPENAI_API_KEY"
@@ -1323,6 +1325,8 @@ class AgentRunner:
         cred_id = None
         if model_lower.startswith("anthropic/") or model_lower.startswith("claude"):
             cred_id = "anthropic"
+        elif model_lower.startswith("minimax/") or model_lower.startswith("minimax-"):
+            cred_id = "minimax"
         # Add more mappings as providers are added to LLM_CREDENTIALS
 
         if cred_id is None:
