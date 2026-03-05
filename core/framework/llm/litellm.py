@@ -755,8 +755,13 @@ class LiteLLMProvider(LLMProvider):
         For those providers we do a regular async completion and emit equivalent
         stream events so higher layers continue to work.
         """
-        from framework.llm.stream_events import FinishEvent, StreamErrorEvent, TextDeltaEvent, TextEndEvent
-        from framework.llm.stream_events import ToolCallEvent
+        from framework.llm.stream_events import (
+            FinishEvent,
+            StreamErrorEvent,
+            TextDeltaEvent,
+            TextEndEvent,
+            ToolCallEvent,
+        )
 
         try:
             response = await self.acomplete(
