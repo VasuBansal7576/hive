@@ -1,0 +1,47 @@
+name: Validate Registry
+
+on:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install validator dependencies
+        run: python -m pip install --disable-pip-version-check jsonschema requests
+
+      - name: Validate changed server manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          head_sha="${{ github.event.pull_request.head.sha }}"
+          mapfile -t manifests < <(git diff --name-only "$base_sha" "$head_sha" -- registry/servers | grep '/manifest\.json$' | sort -u || true)
+
+          if [ "${#manifests[@]}" -eq 0 ]; then
+            echo "No server manifests changed."
+          else
+            for manifest in "${manifests[@]}"; do
+              python scripts/validate.py "$manifest"
+            done
+          fi
+
+      - name: Validate bundled examples
+        shell: bash
+        run: |
+          set -euo pipefail
+          for manifest in registry/_examples/*/manifest.json; do
+            python scripts/validate.py "$manifest"
+          done

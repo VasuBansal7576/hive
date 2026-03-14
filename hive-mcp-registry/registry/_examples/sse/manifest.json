@@ -1,0 +1,94 @@
+{
+  "$schema": "https://raw.githubusercontent.com/aden-hive/hive-mcp-registry/main/schema/manifest.schema.json",
+  "name": "github-mcp",
+  "display_name": "GitHub MCP Server",
+  "version": "1.4.0",
+  "description": "SSE-enabled GitHub MCP server for repository browsing, issue workflows, and pull request automation.",
+  "author": {
+    "name": "GitHub Integrations Team",
+    "github": "github",
+    "url": "https://github.com/github"
+  },
+  "maintainer": {
+    "github": "github",
+    "email": "support@github.com"
+  },
+  "repository": "https://github.com/github/github-mcp-server",
+  "license": "MIT",
+  "status": "verified",
+  "docs_url": "https://github.com/github/github-mcp-server/blob/main/README.md",
+  "supported_os": [
+    "linux",
+    "macos",
+    "windows"
+  ],
+  "deprecated": false,
+  "transport": {
+    "supported": [
+      "sse"
+    ],
+    "default": "sse"
+  },
+  "install": {
+    "pip": null,
+    "docker": "ghcr.io/github/github-mcp-server:latest",
+    "npm": "@modelcontextprotocol/server-github"
+  },
+  "sse": {
+    "url_template": "http://localhost:{port}/sse",
+    "command": "npx",
+    "args": [
+      "@modelcontextprotocol/server-github",
+      "--sse",
+      "--port",
+      "{port}"
+    ]
+  },
+  "tools": [
+    {
+      "name": "github_search_repositories",
+      "description": "Search public and private GitHub repositories."
+    },
+    {
+      "name": "github_list_pull_requests",
+      "description": "List pull requests for a repository."
+    },
+    {
+      "name": "github_create_issue",
+      "description": "Create a new GitHub issue."
+    },
+    {
+      "name": "github_get_file_contents",
+      "description": "Fetch file contents from a repository path and ref."
+    }
+  ],
+  "credentials": [
+    {
+      "id": "github_token",
+      "env_var": "GITHUB_TOKEN",
+      "description": "GitHub personal access token used for API access.",
+      "help_url": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens",
+      "required": true
+    }
+  ],
+  "tags": [
+    "github",
+    "developer-tools",
+    "issue-tracking",
+    "communication"
+  ],
+  "categories": [
+    "developer-tools"
+  ],
+  "mcp_protocol_version": "2024-11-05",
+  "hive": {
+    "min_version": "0.5.0",
+    "max_version": null,
+    "profiles": [
+      "developer",
+      "productivity"
+    ],
+    "tool_namespace": "github",
+    "example_agent": "https://github.com/aden-hive/hive/tree/main/examples/templates/email_reply_agent"
+  }
+}

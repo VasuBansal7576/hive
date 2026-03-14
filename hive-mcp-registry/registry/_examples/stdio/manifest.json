@@ -1,0 +1,91 @@
+{
+  "$schema": "https://raw.githubusercontent.com/aden-hive/hive-mcp-registry/main/schema/manifest.schema.json",
+  "name": "hive-tools",
+  "display_name": "Hive Tools Server",
+  "version": "0.7.1",
+  "description": "Hive's built-in MCP tools server for file operations, browser automation, and web research.",
+  "author": {
+    "name": "Aden Hive Contributors",
+    "github": "aden-hive",
+    "url": "https://github.com/aden-hive"
+  },
+  "maintainer": {
+    "github": "aden-hive",
+    "email": "opensource@aden.ai"
+  },
+  "repository": "https://github.com/aden-hive/hive",
+  "license": "Apache-2.0",
+  "status": "official",
+  "docs_url": "https://github.com/aden-hive/hive/blob/main/tools/README.md",
+  "supported_os": [
+    "linux",
+    "macos",
+    "windows"
+  ],
+  "deprecated": false,
+  "transport": {
+    "supported": [
+      "stdio"
+    ],
+    "default": "stdio"
+  },
+  "install": {
+    "pip": null,
+    "docker": "ghcr.io/aden-hive/hive-tools:latest",
+    "npm": null
+  },
+  "stdio": {
+    "command": "uvx",
+    "args": [
+      "hive-tools",
+      "--stdio"
+    ]
+  },
+  "tools": [
+    {
+      "name": "read_file",
+      "description": "Read files from the local workspace."
+    },
+    {
+      "name": "write_file",
+      "description": "Write files into the local workspace."
+    },
+    {
+      "name": "browser_navigate",
+      "description": "Open and control browser pages during agent execution."
+    },
+    {
+      "name": "web_search",
+      "description": "Search the web for current information when browsing is needed."
+    }
+  ],
+  "credentials": [
+    {
+      "id": "hive_api_token",
+      "env_var": "HIVE_API_TOKEN",
+      "description": "Optional token used for Hive Cloud-authenticated tool sessions.",
+      "help_url": "https://github.com/aden-hive/hive/blob/main/docs/configuration.md",
+      "required": false
+    }
+  ],
+  "tags": [
+    "developer-tools",
+    "productivity",
+    "ai"
+  ],
+  "categories": [
+    "developer-tools"
+  ],
+  "mcp_protocol_version": "2024-11-05",
+  "hive": {
+    "min_version": "0.5.0",
+    "max_version": null,
+    "profiles": [
+      "developer",
+      "research",
+      "automation"
+    ],
+    "tool_namespace": "hive_tools",
+    "example_agent": "https://github.com/aden-hive/hive/tree/main/examples/templates/deep_research_agent"
+  }
+}

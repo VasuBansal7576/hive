@@ -1,0 +1,99 @@
+{
+  "$schema": "https://raw.githubusercontent.com/aden-hive/hive-mcp-registry/main/schema/manifest.schema.json",
+  "name": "postgres-mcp",
+  "display_name": "PostgreSQL MCP Server",
+  "version": "0.9.0",
+  "description": "Unix socket MCP server for PostgreSQL schema inspection and read-heavy database workflows.",
+  "author": {
+    "name": "Database Tooling Guild",
+    "github": "dbtools",
+    "url": "https://github.com/dbtools"
+  },
+  "maintainer": {
+    "github": "dbtools",
+    "email": "maintainers@dbtools.dev"
+  },
+  "repository": "https://github.com/dbtools/postgres-mcp",
+  "license": "Apache-2.0",
+  "status": "community",
+  "docs_url": "https://github.com/dbtools/postgres-mcp/blob/main/README.md",
+  "supported_os": [
+    "linux",
+    "macos"
+  ],
+  "deprecated": false,
+  "transport": {
+    "supported": [
+      "unix"
+    ],
+    "default": "unix"
+  },
+  "install": {
+    "pip": "postgres-mcp",
+    "docker": "ghcr.io/dbtools/postgres-mcp:latest",
+    "npm": null
+  },
+  "unix": {
+    "socket_template": "/tmp/mcp-{name}.sock",
+    "command": "uvx",
+    "args": [
+      "postgres-mcp",
+      "--unix",
+      "{socket_path}"
+    ]
+  },
+  "tools": [
+    {
+      "name": "postgres_list_tables",
+      "description": "List tables and views available in the database."
+    },
+    {
+      "name": "postgres_describe_schema",
+      "description": "Inspect columns, indexes, and foreign keys for a table."
+    },
+    {
+      "name": "postgres_query",
+      "description": "Run a SQL query against the configured PostgreSQL database."
+    },
+    {
+      "name": "postgres_explain_query",
+      "description": "Get an execution plan for a SQL query."
+    }
+  ],
+  "credentials": [
+    {
+      "id": "postgres_dsn",
+      "env_var": "POSTGRES_DSN",
+      "description": "Connection string for the PostgreSQL database.",
+      "help_url": "https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING",
+      "required": true
+    },
+    {
+      "id": "postgres_sslmode",
+      "env_var": "POSTGRES_SSLMODE",
+      "description": "Optional SSL mode override for secure connections.",
+      "help_url": "https://www.postgresql.org/docs/current/libpq-ssl.html",
+      "required": false
+    }
+  ],
+  "tags": [
+    "database",
+    "data",
+    "developer-tools",
+    "storage"
+  ],
+  "categories": [
+    "data"
+  ],
+  "mcp_protocol_version": "2024-11-05",
+  "hive": {
+    "min_version": "0.5.0",
+    "max_version": null,
+    "profiles": [
+      "developer",
+      "analytics"
+    ],
+    "tool_namespace": "postgres",
+    "example_agent": "https://github.com/aden-hive/hive/tree/main/examples/templates/local_business_extractor"
+  }
+}

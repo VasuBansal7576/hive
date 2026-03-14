@@ -1,0 +1,565 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Hive MCP Registry Manifest",
+  "description": "Schema for portable MCP server manifests with optional Hive-specific extensions.",
+  "type": "object",
+  "additionalProperties": false,
+  "patternProperties": {
+    "^_comment(?:_[A-Za-z0-9-]+)?$": {
+      "type": "string",
+      "description": "Human-readable note ignored by registry tooling."
+    }
+  },
+  "required": [
+    "name",
+    "display_name",
+    "version",
+    "description",
+    "author",
+    "maintainer",
+    "repository",
+    "license",
+    "status",
+    "transport",
+    "install",
+    "tools",
+    "credentials",
+    "tags",
+    "categories",
+    "mcp_protocol_version"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri",
+      "description": "Canonical URL for this manifest schema."
+    },
+    "name": {
+      "type": "string",
+      "description": "Portable registry identifier for the MCP server."
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Human-friendly name shown in UIs and docs."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$",
+      "description": "Semantic version of the MCP server manifest entry."
+    },
+    "description": {
+      "type": "string",
+      "description": "Short summary of what the MCP server does."
+    },
+    "author": {
+      "$ref": "#/definitions/author",
+      "description": "Original creator of the MCP server."
+    },
+    "maintainer": {
+      "$ref": "#/definitions/maintainer",
+      "description": "Current maintainer responsible for registry updates."
+    },
+    "repository": {
+      "type": "string",
+      "format": "uri",
+      "description": "Source repository URL for the MCP server."
+    },
+    "license": {
+      "type": "string",
+      "description": "Open source license identifier or text label for the server."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "official",
+        "verified",
+        "community"
+      ],
+      "description": "Trust tier assigned by the registry maintainers."
+    },
+    "docs_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Primary documentation URL for installation and usage."
+    },
+    "supported_os": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "linux",
+          "macos",
+          "windows"
+        ],
+        "description": "Operating system supported by this server."
+      },
+      "description": "Operating systems the server is expected to support."
+    },
+    "deprecated": {
+      "type": "boolean",
+      "description": "Whether this manifest points to a deprecated server."
+    },
+    "deprecated_by": {
+      "type": "string",
+      "description": "Registry name of the preferred replacement server."
+    },
+    "transport": {
+      "$ref": "#/definitions/transport",
+      "description": "Transport modes supported by this MCP server."
+    },
+    "install": {
+      "$ref": "#/definitions/install",
+      "description": "Install sources for common package ecosystems."
+    },
+    "stdio": {
+      "$ref": "#/definitions/stdioTransport",
+      "description": "Configuration for launching the server over stdio."
+    },
+    "http": {
+      "$ref": "#/definitions/httpTransport",
+      "description": "Configuration for launching or reaching the server over HTTP."
+    },
+    "unix": {
+      "$ref": "#/definitions/unixTransport",
+      "description": "Configuration for launching or reaching the server over a Unix domain socket."
+    },
+    "sse": {
+      "$ref": "#/definitions/sseTransport",
+      "description": "Configuration for launching or reaching the server over Server-Sent Events."
+    },
+    "tools": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/tool"
+      },
+      "description": "Tool declarations exposed by the MCP server."
+    },
+    "credentials": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/credential"
+      },
+      "description": "Credentials and environment variables required by the server."
+    },
+    "tags": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "description": "Discovery tag describing the server domain or ecosystem."
+      },
+      "description": "Search tags used for catalog filtering."
+    },
+    "categories": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "description": "High-level category label for the server."
+      },
+      "description": "Broad product or workflow categories used by clients."
+    },
+    "mcp_protocol_version": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "description": "MCP protocol version implemented by the server."
+    },
+    "hive": {
+      "$ref": "#/definitions/hive",
+      "description": "Optional Hive-specific compatibility metadata."
+    }
+  },
+  "definitions": {
+    "commentField": {
+      "type": "string",
+      "description": "Human-readable note ignored by registry tooling."
+    },
+    "author": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^_comment(?:_[A-Za-z0-9-]+)?$": {
+          "$ref": "#/definitions/commentField"
+        }
+      },
+      "required": [
+        "name",
+        "github",
+        "url"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Display name of the original author."
+        },
+        "github": {
+          "type": "string",
+          "description": "GitHub username of the original author."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Primary homepage or profile URL for the original author."
+        }
+      },
+      "description": "Author identity information."
+    },
+    "maintainer": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^_comment(?:_[A-Za-z0-9-]+)?$": {
+          "$ref": "#/definitions/commentField"
+        }
+      },
+      "required": [
+        "github",
+        "email"
+      ],
+      "properties": {
+        "github": {
+          "type": "string",
+          "description": "GitHub username for the current maintainer."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Contact email for registry review follow-up."
+        }
+      },
+      "description": "Maintainer contact information."
+    },
+    "transport": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^_comment(?:_[A-Za-z0-9-]+)?$": {
+          "$ref": "#/definitions/commentField"
+        }
+      },
+      "required": [
+        "supported",
+        "default"
+      ],
+      "properties": {
+        "supported": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "stdio",
+              "http",
+              "unix",
+              "sse"
+            ],
+            "description": "One supported transport for this server."
+          },
+          "description": "Transports that this server can speak."
+        },
+        "default": {
+          "type": "string",
+          "enum": [
+            "stdio",
+            "http",
+            "unix",
+            "sse"
+          ],
+          "description": "Default transport recommended to clients."
+        }
+      },
+      "description": "Transport selection metadata."
+    },
+    "install": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^_comment(?:_[A-Za-z0-9-]+)?$": {
+          "$ref": "#/definitions/commentField"
+        }
+      },
+      "required": [
+        "pip",
+        "docker",
+        "npm"
+      ],
+      "properties": {
+        "pip": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "PyPI package name, or null when pip is not supported."
+        },
+        "docker": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Docker image reference, or null when Docker is not supported."
+        },
+        "npm": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "npm package name, or null when npm is not supported."
+        }
+      },
+      "description": "Install coordinates for package managers."
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^_comment(?:_[A-Za-z0-9-]+)?$": {
+          "$ref": "#/definitions/commentField"
+        }
+      },
+      "required": [
+        "name",
+        "description"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Portable snake_case tool name exposed by the server."
+        },
+        "description": {
+          "type": "string",
+          "description": "Short explanation of what the tool does."
+        }
+      },
+      "description": "One tool exposed by the MCP server."
+    },
+    "credential": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^_comment(?:_[A-Za-z0-9-]+)?$": {
+          "$ref": "#/definitions/commentField"
+        }
+      },
+      "required": [
+        "id",
+        "env_var",
+        "description",
+        "required"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable credential identifier used by clients."
+        },
+        "env_var": {
+          "type": "string",
+          "description": "Environment variable name used to supply the credential."
+        },
+        "description": {
+          "type": "string",
+          "description": "Explanation of what the credential is for."
+        },
+        "help_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL explaining how to obtain or configure the credential."
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Whether this credential is required for core functionality."
+        }
+      },
+      "description": "One credential declaration."
+    },
+    "stdioTransport": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^_comment(?:_[A-Za-z0-9-]+)?$": {
+          "$ref": "#/definitions/commentField"
+        }
+      },
+      "required": [
+        "command",
+        "args"
+      ],
+      "properties": {
+        "command": {
+          "type": "string",
+          "description": "Executable used to launch the server in stdio mode."
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One launch argument passed to the stdio command."
+          },
+          "description": "Arguments passed when launching the stdio server."
+        }
+      },
+      "description": "Launch information for stdio transport."
+    },
+    "httpTransport": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^_comment(?:_[A-Za-z0-9-]+)?$": {
+          "$ref": "#/definitions/commentField"
+        }
+      },
+      "required": [
+        "default_port",
+        "health_path",
+        "command",
+        "args"
+      ],
+      "properties": {
+        "default_port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "Default TCP port used by the HTTP server."
+        },
+        "health_path": {
+          "type": "string",
+          "description": "Relative health-check path exposed by the HTTP server."
+        },
+        "command": {
+          "type": "string",
+          "description": "Executable used to launch the server in HTTP mode."
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One launch argument passed to the HTTP command."
+          },
+          "description": "Arguments passed when launching the HTTP server."
+        }
+      },
+      "description": "Launch and connection information for HTTP transport."
+    },
+    "unixTransport": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^_comment(?:_[A-Za-z0-9-]+)?$": {
+          "$ref": "#/definitions/commentField"
+        }
+      },
+      "required": [
+        "socket_template",
+        "command",
+        "args"
+      ],
+      "properties": {
+        "socket_template": {
+          "type": "string",
+          "description": "Socket path template, optionally using {socket_path} or {name}."
+        },
+        "command": {
+          "type": "string",
+          "description": "Executable used to launch the server in Unix socket mode."
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One launch argument passed to the Unix socket command."
+          },
+          "description": "Arguments passed when launching the Unix socket server."
+        }
+      },
+      "description": "Launch and connection information for Unix domain socket transport."
+    },
+    "sseTransport": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^_comment(?:_[A-Za-z0-9-]+)?$": {
+          "$ref": "#/definitions/commentField"
+        }
+      },
+      "required": [
+        "url_template",
+        "command",
+        "args"
+      ],
+      "properties": {
+        "url_template": {
+          "type": "string",
+          "description": "SSE endpoint template, optionally using {port} or {name}."
+        },
+        "command": {
+          "type": "string",
+          "description": "Executable used to launch the server in SSE mode."
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One launch argument passed to the SSE command."
+          },
+          "description": "Arguments passed when launching the SSE server."
+        }
+      },
+      "description": "Launch and connection information for SSE transport."
+    },
+    "hive": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^_comment(?:_[A-Za-z0-9-]+)?$": {
+          "$ref": "#/definitions/commentField"
+        }
+      },
+      "required": [
+        "min_version",
+        "max_version",
+        "profiles",
+        "tool_namespace",
+        "example_agent"
+      ],
+      "properties": {
+        "min_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$",
+          "description": "Minimum Hive version that can consume this manifest."
+        },
+        "max_version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$",
+          "description": "Maximum Hive version supported, or null when open-ended."
+        },
+        "profiles": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "description": "One Hive profile where this server fits well."
+          },
+          "description": "Hive profile recommendations for this server."
+        },
+        "tool_namespace": {
+          "type": "string",
+          "description": "Preferred Hive namespace prefix for the server's tools."
+        },
+        "example_agent": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to an example Hive agent that uses this server."
+        }
+      },
+      "description": "Hive-specific compatibility metadata."
+    }
+  }
+}

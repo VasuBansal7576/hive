@@ -1,0 +1,141 @@
+{
+  "$schema": "https://raw.githubusercontent.com/aden-hive/hive-mcp-registry/main/schema/manifest.schema.json",
+  "_comment": "Copy this file into registry/servers/<your-server>/manifest.json and replace the placeholder values.",
+  "name": "my-server",
+  "display_name": "My Server MCP",
+  "version": "1.0.0",
+  "description": "Example MCP server manifest showing the full registry format.",
+  "_comment_author": "Author identifies the original creator of the server package.",
+  "author": {
+    "name": "Example Author",
+    "github": "example-author",
+    "url": "https://github.com/example-author"
+  },
+  "_comment_maintainer": "Maintainer identifies who answers review follow-up and keeps the manifest fresh.",
+  "maintainer": {
+    "github": "example-maintainer",
+    "email": "maintainer@example.com"
+  },
+  "repository": "https://github.com/example-author/my-server-mcp",
+  "license": "Apache-2.0",
+  "status": "community",
+  "_comment_trust": "Trust metadata helps users understand support level and lifecycle state.",
+  "docs_url": "https://github.com/example-author/my-server-mcp/blob/main/README.md",
+  "supported_os": [
+    "linux",
+    "macos",
+    "windows"
+  ],
+  "deprecated": false,
+  "deprecated_by": "my-server-v2",
+  "_comment_transport": "List every transport you support and choose one default for clients.",
+  "transport": {
+    "supported": [
+      "stdio",
+      "http",
+      "unix",
+      "sse"
+    ],
+    "default": "stdio"
+  },
+  "_comment_install": "Set package managers you support and use null when a channel does not exist.",
+  "install": {
+    "pip": "my-server",
+    "docker": "ghcr.io/example-author/my-server:latest",
+    "npm": "@example/my-server-mcp"
+  },
+  "_comment_stdio": "stdio is the most portable transport for local MCP clients.",
+  "stdio": {
+    "command": "uvx",
+    "args": [
+      "my-server",
+      "--stdio"
+    ]
+  },
+  "_comment_http": "Use {port} in args when the launch command needs the bound port value.",
+  "http": {
+    "default_port": 4020,
+    "health_path": "/health",
+    "command": "uvx",
+    "args": [
+      "my-server",
+      "--http",
+      "--port",
+      "{port}"
+    ]
+  },
+  "_comment_unix": "Use {socket_path} or {name} when the server can bind to a Unix socket.",
+  "unix": {
+    "socket_template": "/tmp/mcp-{name}.sock",
+    "command": "uvx",
+    "args": [
+      "my-server",
+      "--unix",
+      "{socket_path}"
+    ]
+  },
+  "_comment_sse": "SSE endpoints are useful when a server already exposes a long-lived event stream.",
+  "sse": {
+    "url_template": "http://localhost:{port}/sse",
+    "command": "uvx",
+    "args": [
+      "my-server",
+      "--sse",
+      "--port",
+      "{port}"
+    ]
+  },
+  "_comment_tools": "Describe every tool in plain language so clients can render them well.",
+  "tools": [
+    {
+      "name": "my_server_search",
+      "description": "Search records managed by the example server."
+    },
+    {
+      "name": "my_server_create_record",
+      "description": "Create a new record in the example service."
+    },
+    {
+      "name": "my_server_get_status",
+      "description": "Return the current status and health summary."
+    }
+  ],
+  "_comment_credentials": "Each credential maps to one environment variable that users can set.",
+  "credentials": [
+    {
+      "id": "my_server_api_key",
+      "env_var": "MY_SERVER_API_KEY",
+      "description": "API key used to authenticate to My Server.",
+      "help_url": "https://github.com/example-author/my-server-mcp#authentication",
+      "required": true
+    },
+    {
+      "id": "my_server_workspace",
+      "env_var": "MY_SERVER_WORKSPACE",
+      "description": "Workspace slug or tenant identifier for multi-tenant deployments.",
+      "help_url": "https://github.com/example-author/my-server-mcp#workspace-selection",
+      "required": false
+    }
+  ],
+  "_comment_discovery": "Tags drive search filtering; categories group the server by broader workflow.",
+  "tags": [
+    "developer-tools",
+    "data",
+    "ai"
+  ],
+  "categories": [
+    "developer-tools"
+  ],
+  "mcp_protocol_version": "2024-11-05",
+  "_comment_hive": "The hive block is optional and only needed for Hive-aware clients.",
+  "hive": {
+    "min_version": "0.5.0",
+    "max_version": null,
+    "profiles": [
+      "developer",
+      "automation"
+    ],
+    "tool_namespace": "my_server",
+    "example_agent": "https://github.com/example-author/my-server-mcp/tree/main/examples/hive-agent"
+  }
+}
