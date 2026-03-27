@@ -252,6 +252,7 @@ class TestToolConversion:
             "options": ["Yes", "No"],
         }
 
+
 class TestAnthropicProviderBackwardCompatibility:
     """Test AnthropicProvider backward compatibility with LiteLLM backend."""
 
@@ -954,6 +955,8 @@ class TestCodexRequestHardening:
             {"query": "alpha"},
             {"path": "beta"},
         ]
+
+
 class TestOpenRouterToolCompatFallback:
     """OpenRouter models should fall back when native tool use is unavailable."""
 

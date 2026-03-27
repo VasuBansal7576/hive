@@ -331,9 +331,7 @@ class NodeConversation:
     def system_prompt(self) -> str:
         return self._system_prompt
 
-    def update_system_prompt(
-        self, new_prompt: str, output_keys: list[str] | None = None
-    ) -> None:
+    def update_system_prompt(self, new_prompt: str, output_keys: list[str] | None = None) -> None:
         """Update the system prompt.
 
         Used in continuous conversation mode at phase transitions to swap

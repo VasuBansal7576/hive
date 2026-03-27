@@ -997,7 +997,7 @@ def _load_recent_worker_input_defaults(runtime: Any, input_keys: list[str]) -> d
             continue
 
         merged_input = dict(input_data)
-        result_output = ((raw_state.get("result") or {}).get("output") or {})
+        result_output = (raw_state.get("result") or {}).get("output") or {}
         if isinstance(result_output, dict):
             for key in work_keys:
                 if merged_input.get(key) in (None, "") and result_output.get(key) not in (None, ""):
@@ -3225,9 +3225,8 @@ def register_queen_lifecycle_tools(
                             f"{health_snapshot['steps_since_last_accept']} non-ACCEPT step(s)"
                             " since last ACCEPT)"
                         )
-                    elif (
-                        signal == "recent_non_accept_churn"
-                        and health_snapshot.get("recent_verdicts")
+                    elif signal == "recent_non_accept_churn" and health_snapshot.get(
+                        "recent_verdicts"
                     ):
                         verdicts = ", ".join(health_snapshot["recent_verdicts"][-4:])
                         desc += f" ({verdicts})"

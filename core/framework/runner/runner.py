@@ -910,6 +910,8 @@ def _is_antigravity_proxy_available() -> bool:
             return True
     except (OSError, TimeoutError):
         return False
+
+
 @dataclass
 class AgentInfo:
     """Information about an exported agent."""

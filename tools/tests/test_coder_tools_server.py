@@ -1045,9 +1045,7 @@ def test_behavior_validation_errors_rejects_data_tools_used_for_review_root_work
 
     errors = mod._behavior_validation_errors(agent_module)
 
-    assert any(
-        "uses session data tools" in error and "review_root" in error for error in errors
-    )
+    assert any("uses session data tools" in error and "review_root" in error for error in errors)
 
 
 def test_behavior_validation_errors_allows_session_data_tools_for_delivery_payloads():
@@ -1061,8 +1059,7 @@ def test_behavior_validation_errors_allows_session_data_tools_for_delivery_paylo
         ),
         goal=SimpleNamespace(
             description=(
-                "Expose a manifest artifact and clickable link after local "
-                "review generation."
+                "Expose a manifest artifact and clickable link after local review generation."
             ),
             success_criteria=[
                 SimpleNamespace(
@@ -1123,8 +1120,7 @@ Tasks:
    - artifact_links
 """,
                 success_criteria=(
-                    "Clickable session artifact links are returned and final "
-                    "result is complete."
+                    "Clickable session artifact links are returned and final result is complete."
                 ),
             ),
             SimpleNamespace(

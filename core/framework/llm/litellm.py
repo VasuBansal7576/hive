@@ -179,6 +179,8 @@ _CACHE_CONTROL_PREFIXES = (
     "zai-glm",
     "glm-",
 )
+
+
 def _model_supports_cache_control(model: str) -> bool:
     return any(model.startswith(p) for p in _CACHE_CONTROL_PREFIXES)
 

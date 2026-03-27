@@ -331,9 +331,7 @@ def _node_can_progress_without_declared_tools(node) -> bool:
         or "use set_output" in prompt
         or "set_output " in prompt
     )
-    looks_like_real_work = any(
-        _contains_hint_word(text, hint) for hint in _ENTRY_DIRECT_WORK_HINTS
-    )
+    looks_like_real_work = any(_contains_hint_word(text, hint) for hint in _ENTRY_DIRECT_WORK_HINTS)
     return mentions_set_output and looks_like_real_work
 
 
@@ -363,9 +361,7 @@ def _behavior_validation_errors(agent_module) -> list[str]:
             cid = getattr(criterion, "id", "<unknown>")
             for attr in ("description", "metric", "target"):
                 if _is_placeholder_text(getattr(criterion, attr, "") or ""):
-                    errors.append(
-                        f"Success criterion '{cid}' has blank or placeholder {attr}"
-                    )
+                    errors.append(f"Success criterion '{cid}' has blank or placeholder {attr}")
         for constraint in list(getattr(goal, "constraints", []) or []):
             cid = getattr(constraint, "id", "<unknown>")
             if _is_placeholder_text(getattr(constraint, "description", "") or ""):
@@ -442,7 +438,7 @@ def _behavior_validation_errors(agent_module) -> list[str]:
                         node_desc,
                         prompt,
                     ],
-            )
+                )
             ).lower()
             lowered_input_keys = {str(key).lower() for key in input_keys}
             lowered_output_keys = {str(key).lower() for key in output_keys}
@@ -475,8 +471,10 @@ def _behavior_validation_errors(agent_module) -> list[str]:
                     "paths",
                 )
             )
-            if intake_like and not direct_work_like and (
-                generic_task_only or pass_through_inputs or runtime_normalization_only
+            if (
+                intake_like
+                and not direct_work_like
+                and (generic_task_only or pass_through_inputs or runtime_normalization_only)
             ):
                 errors.append(
                     f"Entry node '{node_id}' appears to be an intake/config parser. "
@@ -487,8 +485,10 @@ def _behavior_validation_errors(agent_module) -> list[str]:
                 lowered_key = str(input_key).lower()
                 if lowered_key not in _OUTPUT_DIRECTORY_INPUT_HINTS:
                     continue
-                if lowered_key in text and "exist" in text and (
-                    "directory" in text or "directories" in text
+                if (
+                    lowered_key in text
+                    and "exist" in text
+                    and ("directory" in text or "directories" in text)
                 ):
                     errors.append(
                         f"Entry node '{node_id}' requires output path '{input_key}' to pre-exist. "
@@ -2081,9 +2081,7 @@ def _validate_agent_package_impl(agent_name: str) -> dict[str, object]:
 
         agent_mod = importlib.import_module(package_name)
         behavior_errors = _behavior_validation_errors(agent_mod)
-        behavior_blockers, behavior_warnings = _classify_behavior_validation_errors(
-            behavior_errors
-        )
+        behavior_blockers, behavior_warnings = _classify_behavior_validation_errors(behavior_errors)
         steps["behavior_validation"] = {
             "passed": len(behavior_blockers) == 0,
             "output": (
@@ -2137,8 +2135,7 @@ def _validate_agent_package_impl(agent_name: str) -> dict[str, object]:
             }
             if not all_passed:
                 warning_summary = (
-                    "Test suite not fully passing: "
-                    f"{test_result.get('summary', 'unknown')}"
+                    f"Test suite not fully passing: {test_result.get('summary', 'unknown')}"
                 )
                 steps["tests"]["warning"] = warning_summary
                 steps["tests"]["warnings"] = [warning_summary]

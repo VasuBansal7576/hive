@@ -98,9 +98,7 @@ async def test_codex_style_text_only_planning_turn_counts_toward_ask_rounds() ->
         output_keys=[],
         skip_judge=True,
     )
-    llm = MockStreamingLLM(
-        scenarios=[text_scenario("What kind of agent should I design for you?")]
-    )
+    llm = MockStreamingLLM(scenarios=[text_scenario("What kind of agent should I design for you?")])
     node = EventLoopNode(event_bus=bus, config=LoopConfig(max_iterations=5))
     ctx = build_ctx(spec, llm)
 

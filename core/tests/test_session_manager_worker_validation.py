@@ -54,7 +54,7 @@ async def test_load_worker_blocks_invalid_package_before_runner_load(monkeypatch
         await manager.load_worker(session.id, Path("/tmp/bad_worker"))
 
     assert "blank or placeholder system_prompt" in str(exc.value)
-    assert captured["agent_ref"] == "/tmp/bad_worker"
+    assert Path(captured["agent_ref"]).as_posix() == "/tmp/bad_worker"
     assert called["runner_load"] is False
 
 

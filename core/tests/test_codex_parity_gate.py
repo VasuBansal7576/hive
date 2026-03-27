@@ -274,11 +274,11 @@ async def test_codex_parity_rerun_reuses_complete_recent_defaults(
         graph=SimpleNamespace(
             nodes=[],
             entry_node="process",
-            get_node=lambda node_id: SimpleNamespace(
-                input_keys=["target_dir", "review_dir", "word_threshold"]
-            )
-            if node_id == "process"
-            else None,
+            get_node=lambda node_id: (
+                SimpleNamespace(input_keys=["target_dir", "review_dir", "word_threshold"])
+                if node_id == "process"
+                else None
+            ),
         ),
         get_entry_points=lambda: [SimpleNamespace(id="default", entry_node="process")],
     )
@@ -422,13 +422,13 @@ async def test_codex_parity_done_for_now_parks_queen_without_new_followup() -> N
     session = _make_session()
     session.event_bus.get_history = MagicMock(
         return_value=[
-        AgentEvent(
-            type=EventType.CLIENT_INPUT_REQUESTED,
-            stream_id="queen",
-            node_id="queen",
-            execution_id=session.id,
-            data={"options": ["Run again with same input", "Done for now"]},
-        )
+            AgentEvent(
+                type=EventType.CLIENT_INPUT_REQUESTED,
+                stream_id="queen",
+                node_id="queen",
+                execution_id=session.id,
+                data={"options": ["Run again with same input", "Done for now"]},
+            )
         ]
     )
     session.event_bus.emit_client_output_delta = AsyncMock()

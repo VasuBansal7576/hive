@@ -66,8 +66,7 @@ def validate_agent_path(agent_path: str | Path) -> Path:
         if resolved.is_relative_to(root) and resolved != root:
             return resolved
     raise ValueError(
-        "agent_path must be inside an allowed directory "
-        "(exports/, examples/, or ~/.hive/agents/)"
+        "agent_path must be inside an allowed directory (exports/, examples/, or ~/.hive/agents/)"
     )
 
 

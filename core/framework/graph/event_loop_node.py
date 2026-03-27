@@ -1274,10 +1274,7 @@ class EventLoopNode(NodeProtocol):
                 and not ctx.node_spec.client_facing
                 and not user_input_requested
                 and not queen_input_requested
-                and (
-                    self._can_auto_complete_outputs(ctx)
-                    or _received_queen_guidance
-                )
+                and (self._can_auto_complete_outputs(ctx) or _received_queen_guidance)
                 and not reported_to_parent
                 and not _saw_transient_stream_retry
                 and not any(
@@ -1302,9 +1299,7 @@ class EventLoopNode(NodeProtocol):
                         node_type="event_loop",
                         step_index=iteration,
                         verdict="ACCEPT",
-                        verdict_feedback=(
-                            "Required outputs satisfied; auto-completed node."
-                        ),
+                        verdict_feedback=("Required outputs satisfied; auto-completed node."),
                         tool_calls=logged_tool_calls,
                         llm_text=assistant_text,
                         input_tokens=turn_tokens.get("input", 0),
@@ -2600,7 +2595,6 @@ class EventLoopNode(NodeProtocol):
                         is_error=result.is_error,
                     )
                     if not result.is_error:
-
                         # Auto-spill happens inside accumulator.set()
                         # — it fires on every code path (fresh, resume,
                         # restore) and prevents overwrite regression.

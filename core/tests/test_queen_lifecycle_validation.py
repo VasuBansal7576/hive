@@ -107,7 +107,7 @@ async def test_get_worker_status_summary_flags_retry_and_judge_pressure() -> Non
             streams={
                 "default": SimpleNamespace(
                     active_execution_ids=["exec-1"],
-                        get_context=lambda _exec_id: SimpleNamespace(started_at=datetime.now()),
+                    get_context=lambda _exec_id: SimpleNamespace(started_at=datetime.now()),
                     get_waiting_nodes=lambda: [],
                 )
             }
@@ -247,17 +247,19 @@ def test_build_worker_input_data_maps_bullet_task_fields_to_entry_inputs(
         get_entry_points=lambda: [SimpleNamespace(id="default", entry_node="process")],
         graph=SimpleNamespace(
             entry_node="process",
-            get_node=lambda node_id: SimpleNamespace(
-                input_keys=[
-                    "docs_dir",
-                    "review_dir",
-                    "word_threshold",
-                    "style_rules",
-                    "target_ratio",
-                ]
-            )
-            if node_id == "process"
-            else None,
+            get_node=lambda node_id: (
+                SimpleNamespace(
+                    input_keys=[
+                        "docs_dir",
+                        "review_dir",
+                        "word_threshold",
+                        "style_rules",
+                        "target_ratio",
+                    ]
+                )
+                if node_id == "process"
+                else None
+            ),
         ),
     )
 
@@ -294,21 +296,17 @@ def test_build_worker_input_data_maps_equals_style_runtime_fields(
         get_entry_points=lambda: [SimpleNamespace(id="default", entry_node="process")],
         graph=SimpleNamespace(
             entry_node="process",
-            get_node=lambda node_id: SimpleNamespace(
-                input_keys=["target_dir", "review_dir_mode", "word_threshold"]
-            )
-            if node_id == "process"
-            else None,
+            get_node=lambda node_id: (
+                SimpleNamespace(input_keys=["target_dir", "review_dir_mode", "word_threshold"])
+                if node_id == "process"
+                else None
+            ),
         ),
     )
 
     payload = qlt._build_worker_input_data(
         runtime,
-        (
-            "Yes, rerun with target_dir=docs "
-            "review_dir_mode=next_to_source "
-            "word_threshold=800"
-        ),
+        ("Yes, rerun with target_dir=docs review_dir_mode=next_to_source word_threshold=800"),
     )
 
     assert payload == {
@@ -354,20 +352,17 @@ def test_build_worker_input_data_backfills_missing_fields_from_recent_session(
         get_entry_points=lambda: [SimpleNamespace(id="default", entry_node="process")],
         graph=SimpleNamespace(
             entry_node="process",
-            get_node=lambda node_id: SimpleNamespace(
-                input_keys=["target_dir", "review_dir", "word_threshold"]
-            )
-            if node_id == "process"
-            else None,
+            get_node=lambda node_id: (
+                SimpleNamespace(input_keys=["target_dir", "review_dir", "word_threshold"])
+                if node_id == "process"
+                else None
+            ),
         ),
     )
 
     payload = qlt._build_worker_input_data(
         runtime,
-        (
-            "review_dir: docs_reviews\n"
-            "word_threshold: 800. Validate inputs and continue."
-        ),
+        ("review_dir: docs_reviews\nword_threshold: 800. Validate inputs and continue."),
     )
 
     assert payload == {
@@ -401,11 +396,11 @@ def test_build_worker_input_data_reuses_recent_defaults_for_rerun_phrase(
         get_entry_points=lambda: [SimpleNamespace(id="default", entry_node="process")],
         graph=SimpleNamespace(
             entry_node="process",
-            get_node=lambda node_id: SimpleNamespace(
-                input_keys=["target_dir", "review_dir", "word_threshold"]
-            )
-            if node_id == "process"
-            else None,
+            get_node=lambda node_id: (
+                SimpleNamespace(input_keys=["target_dir", "review_dir", "word_threshold"])
+                if node_id == "process"
+                else None
+            ),
         ),
     )
 
@@ -448,20 +443,17 @@ def test_build_worker_input_data_backfills_from_recent_result_output(
         get_entry_points=lambda: [SimpleNamespace(id="default", entry_node="process")],
         graph=SimpleNamespace(
             entry_node="process",
-            get_node=lambda node_id: SimpleNamespace(
-                input_keys=["target_dir", "review_dir", "word_threshold"]
-            )
-            if node_id == "process"
-            else None,
+            get_node=lambda node_id: (
+                SimpleNamespace(input_keys=["target_dir", "review_dir", "word_threshold"])
+                if node_id == "process"
+                else None
+            ),
         ),
     )
 
     payload = qlt._build_worker_input_data(
         runtime,
-        (
-            "review_dir: docs_reviews\n"
-            "word_threshold: 600"
-        ),
+        ("review_dir: docs_reviews\nword_threshold: 600"),
     )
 
     assert payload == {
@@ -491,8 +483,7 @@ async def test_load_built_agent_blocks_invalid_package(monkeypatch, tmp_path: Pa
                         "behavior_validation": {
                             "passed": False,
                             "output": (
-                                "Node 'scan-markdown' has a blank or placeholder"
-                                " system_prompt"
+                                "Node 'scan-markdown' has a blank or placeholder system_prompt"
                             ),
                         }
                     },
@@ -591,11 +582,13 @@ async def test_run_agent_with_input_uses_structured_entry_inputs(
         graph=SimpleNamespace(
             nodes=[],
             entry_node="process",
-            get_node=lambda node_id: SimpleNamespace(
-                input_keys=["docs_path", "review_path", "word_threshold", "style_rules"]
-            )
-            if node_id == "process"
-            else None,
+            get_node=lambda node_id: (
+                SimpleNamespace(
+                    input_keys=["docs_path", "review_path", "word_threshold", "style_rules"]
+                )
+                if node_id == "process"
+                else None
+            ),
         ),
     )
     session = SimpleNamespace(
@@ -679,11 +672,11 @@ async def test_rerun_worker_with_last_input_reuses_complete_recent_defaults(
         graph=SimpleNamespace(
             nodes=[],
             entry_node="process",
-            get_node=lambda node_id: SimpleNamespace(
-                input_keys=["target_dir", "review_dir", "word_threshold"]
-            )
-            if node_id == "process"
-            else None,
+            get_node=lambda node_id: (
+                SimpleNamespace(input_keys=["target_dir", "review_dir", "word_threshold"])
+                if node_id == "process"
+                else None
+            ),
         ),
         get_entry_points=lambda: [SimpleNamespace(id="default", entry_node="process")],
     )
