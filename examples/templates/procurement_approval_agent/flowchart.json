@@ -458,7 +458,7 @@
         "label": ""
       }
     ],
-    "entry_node": "pre-execution-check",
+    "entry_node": "setup-wizard",
     "terminal_nodes": [
       "notifications",
       "request-cancelled",

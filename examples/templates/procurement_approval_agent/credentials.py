@@ -50,7 +50,7 @@ def resolve_quickbooks_credentials(
     client_secret = os.environ.get("QUICKBOOKS_CLIENT_SECRET")
     realm_id = os.environ.get("QUICKBOOKS_REALM_ID")
     refresh_token = os.environ.get("QUICKBOOKS_REFRESH_TOKEN")
-    environment = os.environ.get("QUICKBOOKS_ENV", "sandbox")
+    environment = os.environ.get("QUICKBOOKS_ENV")
     source = "env"
 
     effective_ref = credential_ref or os.environ.get("QUICKBOOKS_CREDENTIAL_REF")
@@ -60,7 +60,7 @@ def resolve_quickbooks_credentials(
             client_secret=client_secret,
             realm_id=realm_id,
             refresh_token=refresh_token,
-            environment=environment,
+            environment=environment or "sandbox",
             source=source,
         )
 
@@ -71,7 +71,7 @@ def resolve_quickbooks_credentials(
             client_secret=client_secret,
             realm_id=realm_id,
             refresh_token=refresh_token,
-            environment=environment,
+            environment=environment or "sandbox",
             source=source,
         )
 
@@ -84,7 +84,7 @@ def resolve_quickbooks_credentials(
             client_secret=client_secret,
             realm_id=realm_id,
             refresh_token=refresh_token,
-            environment=environment,
+            environment=environment or "sandbox",
             source=source,
         )
 
@@ -100,7 +100,7 @@ def resolve_quickbooks_credentials(
             client_secret=client_secret,
             realm_id=realm_id,
             refresh_token=refresh_token,
-            environment=environment,
+            environment=environment or "sandbox",
             source=source,
         )
 

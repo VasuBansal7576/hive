@@ -104,6 +104,11 @@ cleanup() {
   rm -f "$FIFO_API" "$FIFO_CSV"
 }
 
+stop_stale_monitors() {
+  pkill -f "procurement_approval_agent monitor --watch-dir $WATCH_API" || true
+  pkill -f "procurement_approval_agent monitor --watch-dir $WATCH_CSV" || true
+}
+
 trap cleanup EXIT
 
 step "Pre-flight checks"
@@ -117,7 +122,7 @@ fi
 pause 2
 
 step "Clear previous state"
-pkill -f "procurement_approval_agent monitor" || true
+stop_stale_monitors
 rm -rf "$WATCH_API" "$WATCH_CSV" "$HIVE_AGENT_STORAGE_ROOT"
 rm -f "$LOG_API" "$LOG_CSV" "$FIFO_API" "$FIFO_CSV"
 mkdir -p "$WATCH_API" "$WATCH_CSV"

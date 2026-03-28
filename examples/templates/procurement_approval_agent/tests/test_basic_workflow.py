@@ -150,6 +150,30 @@ def test_full_workflow_csv_fallback_mock_mode() -> None:
                 os.environ["HIVE_AGENT_STORAGE_ROOT"] = previous_storage_root
 
 
+def test_each_workflow_run_generates_unique_po_artifacts() -> None:
+    _setup_test_data()
+    _set_qb_creds(enabled=False)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        previous_storage_root = os.environ.get("HIVE_AGENT_STORAGE_ROOT")
+        os.environ["HIVE_AGENT_STORAGE_ROOT"] = tmpdir
+        try:
+            first_output, _ = _run_workflow(mock_qb=True)
+            second_output, _ = _run_workflow(mock_qb=True)
+
+            assert first_output["po_number"] != second_output["po_number"]
+            for po_output in (first_output, second_output):
+                assert all(
+                    po_output["po_number"] in rel_path
+                    for rel_path in po_output.get("po_files_created", [])
+                )
+        finally:
+            if previous_storage_root is None:
+                os.environ.pop("HIVE_AGENT_STORAGE_ROOT", None)
+            else:
+                os.environ["HIVE_AGENT_STORAGE_ROOT"] = previous_storage_root
+            _set_qb_creds(enabled=False)
+
+
 def test_setup_wizard_runs_on_first_execution() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         _set_qb_creds(enabled=False)

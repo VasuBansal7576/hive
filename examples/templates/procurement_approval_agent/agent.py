@@ -309,6 +309,10 @@ class ProcurementApprovalAgent:
             json.dumps(payload, indent=2), encoding="utf-8"
         )
 
+    def _generate_po_number(self) -> str:
+        """Create a stable, collision-resistant PO number for each workflow run."""
+        return datetime.now(timezone.utc).strftime("PO-%Y%m%d-%H%M%S-%f")
+
     def _setup(
         self,
         mock_mode: bool = False,
@@ -401,7 +405,7 @@ class ProcurementApprovalAgent:
         output["remaining_budget"] = 32000
         output["vendor_approved"] = True
 
-        po_number = "PO-20260224-001"
+        po_number = self._generate_po_number()
         output["po_number"] = po_number
         po_data = {
             "po_number": po_number,
@@ -411,9 +415,9 @@ class ProcurementApprovalAgent:
         }
         output["po_data"] = po_data
         output["po_files_created"] = [
-            "data/po/PO-20260224-001.json",
-            "data/po/PO-20260224-001.txt",
-            "data/po/PO-20260224-001_qb_import.csv",
+            f"data/po/{po_number}.json",
+            f"data/po/{po_number}.txt",
+            f"data/po/{po_number}_qb_import.csv",
         ]
 
         declared_has_qb = output.get("declared_qb_api_available")

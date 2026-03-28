@@ -34,7 +34,7 @@ uv run python -m examples.templates.procurement_approval_agent run \
 
 ## Real QuickBooks Credential Configuration
 
-Set all three env vars to enable API mode:
+Set all four required env vars to enable API mode:
 
 ```bash
 export QUICKBOOKS_CLIENT_ID=...
@@ -171,8 +171,7 @@ uv run python -m examples.templates.procurement_approval_agent reset-setup
 
 ### macOS launchd
 
-Template files:
-- `examples/templates/procurement_approval_agent/deploy/com.hive.procurement-approval-agent.plist`
+Helper file:
 - `examples/templates/procurement_approval_agent/deploy/install_launchd.sh`
 
 Install:
@@ -180,6 +179,9 @@ Install:
 ```bash
 bash examples/templates/procurement_approval_agent/deploy/install_launchd.sh
 ```
+
+The installer generates a plist using your current repo path and supports overrides via
+`WATCH_DIR`, `LOG_FILE`, `POLL_INTERVAL`, and `PLIST_DST`.
 
 Or generate a custom plist:
 

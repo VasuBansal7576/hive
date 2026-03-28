@@ -119,6 +119,9 @@ class QuickBooksAPI:
         amount = float(po_data.get("amount", 0) or 0)
         currency = str(po_data.get("currency", "USD"))
         vendor_name = str(po_data.get("vendor", "Unknown Vendor"))
+        # Keep the template payload valid even when callers have not mapped a real
+        # expense account yet; real deployments can override this via po_data.
+        account_ref = str(po_data.get("account_ref") or "1")
 
         # Basic payload that remains reviewable; production mapping can be expanded.
         return {
@@ -133,7 +136,9 @@ class QuickBooksAPI:
                     "Amount": amount,
                     "DetailType": "AccountBasedExpenseLineDetail",
                     "Description": f"Purchase order {po_number}",
-                    "AccountBasedExpenseLineDetail": {},
+                    "AccountBasedExpenseLineDetail": {
+                        "AccountRef": {"value": account_ref},
+                    },
                 }
             ],
         }
