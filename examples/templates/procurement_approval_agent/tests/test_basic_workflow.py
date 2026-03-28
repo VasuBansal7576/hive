@@ -9,7 +9,7 @@ import sqlite3
 import tempfile
 from pathlib import Path
 
-from procurement_approval_agent.agent import ProcurementApprovalAgent, default_agent
+from procurement_approval_agent.agent import ProcurementApprovalAgent
 
 
 def _setup_test_data(data_dir: Path) -> None:
@@ -67,7 +67,8 @@ def _run_workflow(mock_qb: bool, data_dir: Path) -> tuple[dict, Path]:
         "justification": "Need new laptop for ML development work",
         "vendor": "TechSource LLC",
     }
-    result = asyncio.run(default_agent.run(context, mock_mode=True, mock_qb=mock_qb))
+    agent = ProcurementApprovalAgent()
+    result = asyncio.run(agent.run(context, mock_mode=True, mock_qb=mock_qb))
     assert result.success is True
     assert isinstance(result.output, dict)
     qb_mock_path = data_dir / "qb_mock_responses.json"
@@ -113,6 +114,7 @@ def test_full_workflow_api_path_mock_mode() -> None:
                 os.environ.pop("PROCUREMENT_APPROVAL_AGENT_DATA_DIR", None)
             else:
                 os.environ["PROCUREMENT_APPROVAL_AGENT_DATA_DIR"] = previous_data_dir
+            _set_qb_creds(enabled=False)
             _set_qb_creds(enabled=False)
 
 
@@ -198,7 +200,7 @@ def test_over_budget_request_is_denied(monkeypatch) -> None:
         monkeypatch.setenv("PROCUREMENT_APPROVAL_AGENT_DATA_DIR", str(data_dir))
 
         result = asyncio.run(
-            default_agent.run(
+            ProcurementApprovalAgent().run(
                 {
                     "item": "High-end Server",
                     "cost": 999999,
@@ -224,7 +226,7 @@ def test_unapproved_vendor_is_rejected(monkeypatch) -> None:
         monkeypatch.setenv("PROCUREMENT_APPROVAL_AGENT_DATA_DIR", str(data_dir))
 
         result = asyncio.run(
-            default_agent.run(
+            ProcurementApprovalAgent().run(
                 {
                     "item": "Laptop",
                     "cost": 1200,
@@ -274,7 +276,7 @@ def test_setup_wizard_is_skipped_after_preference_saved() -> None:
                 "vendor": "TechSource LLC",
             }
             first_result = asyncio.run(
-                default_agent.run(context, mock_mode=True, mock_qb=True)
+                ProcurementApprovalAgent().run(context, mock_mode=True, mock_qb=True)
             )
             assert first_result.success is True
 
