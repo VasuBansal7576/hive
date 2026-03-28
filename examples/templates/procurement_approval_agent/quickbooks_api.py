@@ -267,6 +267,10 @@ class QuickBooksAPI:
         if not self.token_cache_path:
             return
         self.token_cache_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            os.chmod(self.token_cache_path.parent, 0o700)
+        except OSError:
+            pass
         self.token_cache_path.write_text(
             json.dumps(
                 {
@@ -277,3 +281,7 @@ class QuickBooksAPI:
             ),
             encoding="utf-8",
         )
+        try:
+            os.chmod(self.token_cache_path, 0o600)
+        except OSError:
+            pass

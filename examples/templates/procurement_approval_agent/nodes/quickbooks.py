@@ -96,8 +96,6 @@ def mock_csv_export(
 
     print(f"[mock-qb-csv] generated fallback CSV for PO {po_number}")
     return {
-        "csv_file_path": str(csv_path.relative_to(Path(__file__).resolve().parents[1])),
-        "import_instructions": str(
-            md_path.relative_to(Path(__file__).resolve().parents[1])
-        ),
+        "csv_file_path": str(Path("data") / "po" / csv_path.name),
+        "import_instructions": str(Path("data") / "po" / md_path.name),
     }

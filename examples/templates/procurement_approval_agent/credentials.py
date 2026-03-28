@@ -54,7 +54,7 @@ def resolve_quickbooks_credentials(
     source = "env"
 
     effective_ref = credential_ref or os.environ.get("QUICKBOOKS_CREDENTIAL_REF")
-    if client_id and client_secret and realm_id:
+    if client_id and client_secret and realm_id and refresh_token and environment:
         return QuickBooksCredentials(
             client_id=client_id,
             client_secret=client_secret,

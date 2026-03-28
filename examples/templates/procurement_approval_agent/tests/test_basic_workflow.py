@@ -12,10 +12,8 @@ from pathlib import Path
 from procurement_approval_agent.agent import ProcurementApprovalAgent, default_agent
 
 
-def _setup_test_data() -> None:
+def _setup_test_data(data_dir: Path) -> None:
     """Create sample budget DB and approved vendor CSV for test runs."""
-    agent_dir = Path(__file__).resolve().parents[1]
-    data_dir = agent_dir / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
 
     db_path = data_dir / "budget_tracking.db"
@@ -60,7 +58,7 @@ def _set_qb_creds(enabled: bool) -> None:
         os.environ.pop("QUICKBOOKS_REALM_ID", None)
 
 
-def _run_workflow(mock_qb: bool) -> tuple[dict, Path]:
+def _run_workflow(mock_qb: bool, data_dir: Path) -> tuple[dict, Path]:
     context = {
         "item": "Laptop",
         "cost": 1200,
@@ -72,20 +70,21 @@ def _run_workflow(mock_qb: bool) -> tuple[dict, Path]:
     result = asyncio.run(default_agent.run(context, mock_mode=True, mock_qb=mock_qb))
     assert result.success is True
     assert isinstance(result.output, dict)
-    qb_mock_path = (
-        Path(__file__).resolve().parents[1] / "data" / "qb_mock_responses.json"
-    )
+    qb_mock_path = data_dir / "qb_mock_responses.json"
     return result.output, qb_mock_path
 
 
 def test_full_workflow_api_path_mock_mode() -> None:
-    _setup_test_data()
     _set_qb_creds(enabled=True)
     with tempfile.TemporaryDirectory() as tmpdir:
+        data_dir = Path(tmpdir) / "agent-data"
+        _setup_test_data(data_dir)
         previous_storage_root = os.environ.get("HIVE_AGENT_STORAGE_ROOT")
+        previous_data_dir = os.environ.get("PROCUREMENT_APPROVAL_AGENT_DATA_DIR")
         os.environ["HIVE_AGENT_STORAGE_ROOT"] = tmpdir
+        os.environ["PROCUREMENT_APPROVAL_AGENT_DATA_DIR"] = str(data_dir)
         try:
-            output, qb_mock_path = _run_workflow(mock_qb=True)
+            output, qb_mock_path = _run_workflow(mock_qb=True, data_dir=data_dir)
 
             assert output.get("budget_status") == "auto_approved"
             assert output.get("vendor_approved") is True
@@ -110,17 +109,24 @@ def test_full_workflow_api_path_mock_mode() -> None:
                 os.environ.pop("HIVE_AGENT_STORAGE_ROOT", None)
             else:
                 os.environ["HIVE_AGENT_STORAGE_ROOT"] = previous_storage_root
+            if previous_data_dir is None:
+                os.environ.pop("PROCUREMENT_APPROVAL_AGENT_DATA_DIR", None)
+            else:
+                os.environ["PROCUREMENT_APPROVAL_AGENT_DATA_DIR"] = previous_data_dir
             _set_qb_creds(enabled=False)
 
 
 def test_full_workflow_csv_fallback_mock_mode() -> None:
-    _setup_test_data()
     _set_qb_creds(enabled=False)
     with tempfile.TemporaryDirectory() as tmpdir:
+        data_dir = Path(tmpdir) / "agent-data"
+        _setup_test_data(data_dir)
         previous_storage_root = os.environ.get("HIVE_AGENT_STORAGE_ROOT")
+        previous_data_dir = os.environ.get("PROCUREMENT_APPROVAL_AGENT_DATA_DIR")
         os.environ["HIVE_AGENT_STORAGE_ROOT"] = tmpdir
+        os.environ["PROCUREMENT_APPROVAL_AGENT_DATA_DIR"] = str(data_dir)
         try:
-            output, qb_mock_path = _run_workflow(mock_qb=True)
+            output, qb_mock_path = _run_workflow(mock_qb=True, data_dir=data_dir)
 
             assert output.get("sync_method") == "csv"
             assert output.get("validated_request", {}).get("item") == "Laptop"
@@ -136,7 +142,6 @@ def test_full_workflow_csv_fallback_mock_mode() -> None:
             assert output.get("qb_po_id") in (None, "")
             assert qb_mock_path.exists() is False
 
-            data_dir = Path(__file__).resolve().parents[1] / "data"
             assert (
                 data_dir / output["csv_file_path"].replace("data/", "")
             ).exists() is True
@@ -148,17 +153,24 @@ def test_full_workflow_csv_fallback_mock_mode() -> None:
                 os.environ.pop("HIVE_AGENT_STORAGE_ROOT", None)
             else:
                 os.environ["HIVE_AGENT_STORAGE_ROOT"] = previous_storage_root
+            if previous_data_dir is None:
+                os.environ.pop("PROCUREMENT_APPROVAL_AGENT_DATA_DIR", None)
+            else:
+                os.environ["PROCUREMENT_APPROVAL_AGENT_DATA_DIR"] = previous_data_dir
 
 
 def test_each_workflow_run_generates_unique_po_artifacts() -> None:
-    _setup_test_data()
     _set_qb_creds(enabled=False)
     with tempfile.TemporaryDirectory() as tmpdir:
+        data_dir = Path(tmpdir) / "agent-data"
+        _setup_test_data(data_dir)
         previous_storage_root = os.environ.get("HIVE_AGENT_STORAGE_ROOT")
+        previous_data_dir = os.environ.get("PROCUREMENT_APPROVAL_AGENT_DATA_DIR")
         os.environ["HIVE_AGENT_STORAGE_ROOT"] = tmpdir
+        os.environ["PROCUREMENT_APPROVAL_AGENT_DATA_DIR"] = str(data_dir)
         try:
-            first_output, _ = _run_workflow(mock_qb=True)
-            second_output, _ = _run_workflow(mock_qb=True)
+            first_output, _ = _run_workflow(mock_qb=True, data_dir=data_dir)
+            second_output, _ = _run_workflow(mock_qb=True, data_dir=data_dir)
 
             assert first_output["po_number"] != second_output["po_number"]
             for po_output in (first_output, second_output):
@@ -171,7 +183,63 @@ def test_each_workflow_run_generates_unique_po_artifacts() -> None:
                 os.environ.pop("HIVE_AGENT_STORAGE_ROOT", None)
             else:
                 os.environ["HIVE_AGENT_STORAGE_ROOT"] = previous_storage_root
+            if previous_data_dir is None:
+                os.environ.pop("PROCUREMENT_APPROVAL_AGENT_DATA_DIR", None)
+            else:
+                os.environ["PROCUREMENT_APPROVAL_AGENT_DATA_DIR"] = previous_data_dir
             _set_qb_creds(enabled=False)
+
+
+def test_over_budget_request_is_denied(monkeypatch) -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_dir = Path(tmpdir) / "agent-data"
+        _setup_test_data(data_dir)
+        monkeypatch.setenv("HIVE_AGENT_STORAGE_ROOT", str(Path(tmpdir) / "storage"))
+        monkeypatch.setenv("PROCUREMENT_APPROVAL_AGENT_DATA_DIR", str(data_dir))
+
+        result = asyncio.run(
+            default_agent.run(
+                {
+                    "item": "High-end Server",
+                    "cost": 999999,
+                    "department": "engineering",
+                    "requester": "alice@company.com",
+                    "justification": "Need new infrastructure for testing",
+                    "vendor": "TechSource LLC",
+                },
+                mock_mode=True,
+                mock_qb=True,
+            )
+        )
+
+        assert result.success is False
+        assert result.output["budget_status"] == "denied"
+
+
+def test_unapproved_vendor_is_rejected(monkeypatch) -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_dir = Path(tmpdir) / "agent-data"
+        _setup_test_data(data_dir)
+        monkeypatch.setenv("HIVE_AGENT_STORAGE_ROOT", str(Path(tmpdir) / "storage"))
+        monkeypatch.setenv("PROCUREMENT_APPROVAL_AGENT_DATA_DIR", str(data_dir))
+
+        result = asyncio.run(
+            default_agent.run(
+                {
+                    "item": "Laptop",
+                    "cost": 1200,
+                    "department": "engineering",
+                    "requester": "alice@company.com",
+                    "justification": "Need new laptop for ML development work",
+                    "vendor": "Not Approved Inc",
+                },
+                mock_mode=True,
+                mock_qb=True,
+            )
+        )
+
+        assert result.success is False
+        assert result.output["vendor_approved"] is False
 
 
 def test_setup_wizard_runs_on_first_execution() -> None:

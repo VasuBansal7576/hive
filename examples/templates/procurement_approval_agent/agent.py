@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -313,6 +314,47 @@ class ProcurementApprovalAgent:
         """Create a stable, collision-resistant PO number for each workflow run."""
         return datetime.now(timezone.utc).strftime("PO-%Y%m%d-%H%M%S-%f")
 
+    def _data_dir(self) -> Path:
+        configured = os.environ.get("PROCUREMENT_APPROVAL_AGENT_DATA_DIR")
+        if configured:
+            return Path(configured).expanduser()
+        return Path(__file__).resolve().parent / "data"
+
+    def _budget_gate(self, validated_request: dict) -> tuple[str, float]:
+        department = str(validated_request.get("department", "")).strip().lower()
+        cost = float(validated_request.get("cost", 0) or 0)
+        db_path = self._data_dir() / "budget_tracking.db"
+        if not department or not db_path.exists():
+            return "denied", 0.0
+
+        with sqlite3.connect(db_path) as conn:
+            row = conn.execute(
+                "SELECT allocated, spent FROM department_budget WHERE lower(department)=?",
+                (department,),
+            ).fetchone()
+        if row is None:
+            return "denied", 0.0
+
+        remaining_budget = float(row[0]) - float(row[1])
+        if cost <= remaining_budget * 0.9:
+            return "auto_approved", remaining_budget
+        if cost <= remaining_budget:
+            return "needs_approval", remaining_budget
+        return "denied", remaining_budget
+
+    def _vendor_allowed(self, vendor: str) -> bool:
+        vendor_name = vendor.strip().lower()
+        if not vendor_name:
+            return False
+
+        approved_path = self._data_dir() / "approved_vendors.csv"
+        if not approved_path.exists():
+            return False
+
+        rows = approved_path.read_text(encoding="utf-8").splitlines()
+        approved = {row.strip().lower() for row in rows[1:] if row.strip()}
+        return vendor_name in approved
+
     def _setup(
         self,
         mock_mode: bool = False,
@@ -401,9 +443,42 @@ class ProcurementApprovalAgent:
             "vendor": output.get("vendor") or "Unknown",
         }
         output["validated_request"] = validated_request
-        output["budget_status"] = "auto_approved"
-        output["remaining_budget"] = 32000
-        output["vendor_approved"] = True
+        budget_status, remaining_budget = self._budget_gate(validated_request)
+        output["budget_status"] = budget_status
+        output["remaining_budget"] = remaining_budget
+        if budget_status == "denied":
+            error = "Request exceeds available department budget."
+            output["approval_decision"] = "rejected"
+            return ExecutionResult(
+                success=False,
+                output=output,
+                error=error,
+                steps_executed=5,
+            )
+
+        if budget_status == "needs_approval":
+            approval_decision = str(output.get("approval_decision") or "approved")
+            output["approval_decision"] = approval_decision
+            if approval_decision != "approved":
+                error = "Manager approval is required before PO generation."
+                return ExecutionResult(
+                    success=False,
+                    output=output,
+                    error=error,
+                    steps_executed=6,
+                )
+            output.setdefault("approver_name", "Manager")
+
+        vendor_approved = self._vendor_allowed(validated_request["vendor"])
+        output["vendor_approved"] = vendor_approved
+        if not vendor_approved:
+            error = "Vendor is not on the approved vendor list."
+            return ExecutionResult(
+                success=False,
+                output=output,
+                error=error,
+                steps_executed=7,
+            )
 
         po_number = self._generate_po_number()
         output["po_number"] = po_number
@@ -442,7 +517,11 @@ class ProcurementApprovalAgent:
 
         if sync_method == "api":
             if mock_qb:
-                qb_response = mock_quickbooks_api(po_number=po_number, po_data=po_data)
+                qb_response = mock_quickbooks_api(
+                    po_number=po_number,
+                    po_data=po_data,
+                    output_path=self._data_dir() / "qb_mock_responses.json",
+                )
                 output["qb_po_id"] = qb_response["qb_po_id"]
                 output["sync_status"] = qb_response["sync_status"]
             else:
@@ -462,7 +541,11 @@ class ProcurementApprovalAgent:
                         success=False, output=output, error=str(exc), steps_executed=10
                     )
         else:
-            csv_response = mock_csv_export(po_number=po_number, po_data=po_data)
+            csv_response = mock_csv_export(
+                po_number=po_number,
+                po_data=po_data,
+                output_dir=self._data_dir() / "po",
+            )
             output["csv_file_path"] = csv_response["csv_file_path"]
             output["import_instructions"] = csv_response["import_instructions"]
 
