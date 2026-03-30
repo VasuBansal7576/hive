@@ -116,6 +116,7 @@ def test_full_workflow_api_path_mock_mode() -> None:
                 os.environ["PROCUREMENT_APPROVAL_AGENT_DATA_DIR"] = previous_data_dir
             _set_qb_creds(enabled=False)
             _set_qb_creds(enabled=False)
+            _set_qb_creds(enabled=False)
 
 
 def test_full_workflow_csv_fallback_mock_mode() -> None:
