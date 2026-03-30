@@ -1,0 +1,221 @@
+{
+  "original_draft": {
+    "agent_name": "sdr_linkedin_monitor",
+    "goal": "Monitor LinkedIn for 'I'm hiring' and 'Just started a new role' posts from VP of Engineering and CTO titles at Series B+ companies, look up their verified corporate email, draft a highly personalized cold email for each, and queue up to 50 per day for SDR review.",
+    "description": "",
+    "success_criteria": [
+      "Finds qualifying LinkedIn posts matching target titles and company stage filters",
+      "Attempts corporate email lookup for every qualified lead",
+      "Every drafted email references a specific, verified detail about the lead's company (product launch, blog post, or milestone)",
+      "User receives a downloadable HTML report with all drafted emails"
+    ],
+    "constraints": [
+      "Never fabricate leads, email addresses, or company details \u2014 only report what was found from real sources",
+      "Respect the daily quota \u2014 never exceed 50 emails per run",
+      "Never send any email \u2014 only draft for human review",
+      "All drafted emails must be professional, genuine, and under 120 words"
+    ],
+    "nodes": [
+      {
+        "id": "intake",
+        "name": "Campaign Intake",
+        "description": "Collect ICP filters, daily quota, and pitch copy from the user",
+        "node_type": "event_loop",
+        "tools": [],
+        "input_keys": [],
+        "output_keys": [
+          "icp_config",
+          "daily_quota",
+          "pitch_copy"
+        ],
+        "success_criteria": "",
+        "sub_agents": [],
+        "flowchart_type": "start",
+        "flowchart_shape": "stadium",
+        "flowchart_color": "#8aad3f"
+      },
+      {
+        "id": "linkedin-monitor",
+        "name": "LinkedIn Signal Monitor",
+        "description": "Search LinkedIn for qualifying 'hiring' and 'new role' posts from VP Eng / CTO at Series B+ companies",
+        "node_type": "event_loop",
+        "tools": [
+          "exa_search",
+          "exa_get_contents"
+        ],
+        "input_keys": [
+          "icp_config",
+          "daily_quota"
+        ],
+        "output_keys": [
+          "qualified_leads"
+        ],
+        "success_criteria": "",
+        "sub_agents": [],
+        "flowchart_type": "process",
+        "flowchart_shape": "rectangle",
+        "flowchart_color": "#b5a575"
+      },
+      {
+        "id": "email-lookup",
+        "name": "Corporate Email Lookup",
+        "description": "For each qualifying lead, find their verified corporate email address via Exa search over public company pages and profile data",
+        "node_type": "event_loop",
+        "tools": [
+          "exa_search",
+          "exa_get_contents"
+        ],
+        "input_keys": [
+          "qualified_leads"
+        ],
+        "output_keys": [
+          "leads_with_emails"
+        ],
+        "success_criteria": "",
+        "sub_agents": [],
+        "flowchart_type": "process",
+        "flowchart_shape": "rectangle",
+        "flowchart_color": "#b5a575"
+      },
+      {
+        "id": "email-drafter",
+        "name": "Personalized Email Drafter",
+        "description": "Draft a highly personalized cold email per lead: congratulate on the news, reference their company's recent product launch, softly pitch the OSS framework",
+        "node_type": "event_loop",
+        "tools": [
+          "exa_search",
+          "exa_get_contents",
+          "save_data"
+        ],
+        "input_keys": [
+          "leads_with_emails",
+          "pitch_copy"
+        ],
+        "output_keys": [
+          "drafted_emails"
+        ],
+        "success_criteria": "",
+        "sub_agents": [],
+        "flowchart_type": "database",
+        "flowchart_shape": "cylinder",
+        "flowchart_color": "#508878"
+      },
+      {
+        "id": "queue-review",
+        "name": "Email Queue Review",
+        "description": "Present drafted emails to the user, save the approved queue as an HTML report, and serve it for download",
+        "node_type": "event_loop",
+        "tools": [
+          "save_data",
+          "append_data",
+          "load_data",
+          "serve_file_to_user"
+        ],
+        "input_keys": [
+          "drafted_emails"
+        ],
+        "output_keys": [
+          "queue_summary"
+        ],
+        "success_criteria": "",
+        "sub_agents": [],
+        "flowchart_type": "terminal",
+        "flowchart_shape": "stadium",
+        "flowchart_color": "#b5453a"
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-0",
+        "source": "intake",
+        "target": "linkedin-monitor",
+        "condition": "on_success",
+        "description": "",
+        "label": ""
+      },
+      {
+        "id": "edge-1",
+        "source": "linkedin-monitor",
+        "target": "email-lookup",
+        "condition": "on_success",
+        "description": "",
+        "label": ""
+      },
+      {
+        "id": "edge-2",
+        "source": "email-lookup",
+        "target": "email-drafter",
+        "condition": "on_success",
+        "description": "",
+        "label": ""
+      },
+      {
+        "id": "edge-3",
+        "source": "email-drafter",
+        "target": "queue-review",
+        "condition": "on_success",
+        "description": "",
+        "label": ""
+      }
+    ],
+    "entry_node": "intake",
+    "terminal_nodes": [
+      "queue-review"
+    ],
+    "flowchart_legend": {
+      "start": {
+        "shape": "stadium",
+        "color": "#8aad3f"
+      },
+      "terminal": {
+        "shape": "stadium",
+        "color": "#b5453a"
+      },
+      "process": {
+        "shape": "rectangle",
+        "color": "#b5a575"
+      },
+      "decision": {
+        "shape": "diamond",
+        "color": "#d89d26"
+      },
+      "io": {
+        "shape": "parallelogram",
+        "color": "#d06818"
+      },
+      "document": {
+        "shape": "document",
+        "color": "#c4b830"
+      },
+      "database": {
+        "shape": "cylinder",
+        "color": "#508878"
+      },
+      "subprocess": {
+        "shape": "subroutine",
+        "color": "#887a48"
+      },
+      "browser": {
+        "shape": "hexagon",
+        "color": "#cc8850"
+      }
+    }
+  },
+  "flowchart_map": {
+    "intake": [
+      "intake"
+    ],
+    "linkedin-monitor": [
+      "linkedin-monitor"
+    ],
+    "email-lookup": [
+      "email-lookup"
+    ],
+    "email-drafter": [
+      "email-drafter"
+    ],
+    "queue-review": [
+      "queue-review"
+    ]
+  }
+}

@@ -1,0 +1,304 @@
+{
+  "agent": {
+    "id": "sdr_linkedin_monitor",
+    "name": "SDR LinkedIn Monitor",
+    "version": "1.0.0",
+    "description": "Monitor LinkedIn for 'I'm hiring' and 'Just started a new role' posts from VP of Engineering and CTO titles at Series B+ companies, look up verified corporate emails, draft highly personalized cold emails, and queue up to 50 per day for SDR review."
+  },
+  "graph": {
+    "id": "sdr-linkedin-monitor-graph",
+    "goal_id": "sdr-linkedin-monitor",
+    "version": "1.0.0",
+    "entry_node": "intake",
+    "entry_points": {
+      "start": "intake"
+    },
+    "pause_nodes": [],
+    "terminal_nodes": [
+      "queue-review"
+    ],
+    "nodes": [
+      {
+        "id": "intake",
+        "name": "Campaign Intake",
+        "description": "Collect ICP filters, daily quota, and pitch copy from the user",
+        "node_type": "event_loop",
+        "input_keys": [],
+        "output_keys": [
+          "icp_config",
+          "daily_quota",
+          "pitch_copy"
+        ],
+        "nullable_output_keys": [],
+        "input_schema": {},
+        "output_schema": {},
+        "system_prompt": null,
+        "tools": [],
+        "model": null,
+        "function": null,
+        "routes": {},
+        "max_retries": 3,
+        "retry_on": [],
+        "max_node_visits": 1,
+        "output_model": null,
+        "max_validation_retries": 2,
+        "client_facing": true
+      },
+      {
+        "id": "linkedin-monitor",
+        "name": "LinkedIn Signal Monitor",
+        "description": "Search LinkedIn for qualifying hiring and new role posts from VP Eng / CTO at Series B+ companies",
+        "node_type": "event_loop",
+        "input_keys": [
+          "icp_config",
+          "daily_quota"
+        ],
+        "output_keys": [
+          "qualified_leads"
+        ],
+        "nullable_output_keys": [],
+        "input_schema": {},
+        "output_schema": {},
+        "system_prompt": null,
+        "tools": [
+          "exa_search",
+          "exa_get_contents"
+        ],
+        "model": null,
+        "function": null,
+        "routes": {},
+        "max_retries": 3,
+        "retry_on": [],
+        "max_node_visits": 1,
+        "output_model": null,
+        "max_validation_retries": 2,
+        "client_facing": false
+      },
+      {
+        "id": "email-lookup",
+        "name": "Corporate Email Lookup",
+        "description": "Find verified corporate email for each qualifying lead via Exa search and public data",
+        "node_type": "event_loop",
+        "input_keys": [
+          "qualified_leads"
+        ],
+        "output_keys": [
+          "leads_with_emails"
+        ],
+        "nullable_output_keys": [],
+        "input_schema": {},
+        "output_schema": {},
+        "system_prompt": null,
+        "tools": [
+          "exa_search",
+          "exa_get_contents"
+        ],
+        "model": null,
+        "function": null,
+        "routes": {},
+        "max_retries": 3,
+        "retry_on": [],
+        "max_node_visits": 1,
+        "output_model": null,
+        "max_validation_retries": 2,
+        "client_facing": false
+      },
+      {
+        "id": "email-drafter",
+        "name": "Personalized Email Drafter",
+        "description": "Draft a highly personalized cold email per lead referencing their company's recent product launch",
+        "node_type": "event_loop",
+        "input_keys": [
+          "leads_with_emails",
+          "pitch_copy"
+        ],
+        "output_keys": [
+          "drafted_emails"
+        ],
+        "nullable_output_keys": [],
+        "input_schema": {},
+        "output_schema": {},
+        "system_prompt": null,
+        "tools": [
+          "exa_search",
+          "exa_get_contents",
+          "save_data"
+        ],
+        "model": null,
+        "function": null,
+        "routes": {},
+        "max_retries": 3,
+        "retry_on": [],
+        "max_node_visits": 1,
+        "output_model": null,
+        "max_validation_retries": 2,
+        "client_facing": false
+      },
+      {
+        "id": "queue-review",
+        "name": "Email Queue Review",
+        "description": "Present drafted emails to the user, save the queue as HTML, and serve it for download",
+        "node_type": "event_loop",
+        "input_keys": [
+          "drafted_emails"
+        ],
+        "output_keys": [
+          "queue_summary"
+        ],
+        "nullable_output_keys": [],
+        "input_schema": {},
+        "output_schema": {},
+        "system_prompt": null,
+        "tools": [
+          "save_data",
+          "append_data",
+          "load_data",
+          "serve_file_to_user"
+        ],
+        "model": null,
+        "function": null,
+        "routes": {},
+        "max_retries": 3,
+        "retry_on": [],
+        "max_node_visits": 1,
+        "output_model": null,
+        "max_validation_retries": 2,
+        "client_facing": true
+      }
+    ],
+    "edges": [
+      {
+        "id": "intake-to-linkedin-monitor",
+        "source": "intake",
+        "target": "linkedin-monitor",
+        "condition": "on_success",
+        "condition_expr": null,
+        "priority": 1,
+        "input_mapping": {}
+      },
+      {
+        "id": "linkedin-monitor-to-email-lookup",
+        "source": "linkedin-monitor",
+        "target": "email-lookup",
+        "condition": "on_success",
+        "condition_expr": null,
+        "priority": 1,
+        "input_mapping": {}
+      },
+      {
+        "id": "email-lookup-to-email-drafter",
+        "source": "email-lookup",
+        "target": "email-drafter",
+        "condition": "on_success",
+        "condition_expr": null,
+        "priority": 1,
+        "input_mapping": {}
+      },
+      {
+        "id": "email-drafter-to-queue-review",
+        "source": "email-drafter",
+        "target": "queue-review",
+        "condition": "on_success",
+        "condition_expr": null,
+        "priority": 1,
+        "input_mapping": {}
+      }
+    ],
+    "max_steps": 100,
+    "max_retries_per_node": 3,
+    "description": "Monitor LinkedIn for 'I'm hiring' and 'Just started a new role' posts from VP of Engineering and CTO titles at Series B+ companies, look up verified corporate emails, draft highly personalized cold emails, and queue up to 50 per day for SDR review.",
+    "created_at": "2026-03-25T13:39:11.000000"
+  },
+  "goal": {
+    "id": "sdr-linkedin-monitor",
+    "name": "SDR LinkedIn Monitor",
+    "description": "Monitor LinkedIn for 'I'm hiring' and 'Just started a new role' posts from VP of Engineering and CTO titles at Series B+ companies, look up verified corporate emails, draft a highly personalized cold email for each, and queue up to 50 per day for SDR review.",
+    "status": "draft",
+    "success_criteria": [
+      {
+        "id": "sc-signal-detection",
+        "description": "Finds qualifying LinkedIn posts matching target titles and company stage filters",
+        "metric": "qualified_leads_found",
+        "target": ">=1",
+        "weight": 0.25,
+        "met": false
+      },
+      {
+        "id": "sc-email-lookup",
+        "description": "Attempts corporate email lookup for every qualified lead",
+        "metric": "email_lookup_attempted",
+        "target": "true",
+        "weight": 0.20,
+        "met": false
+      },
+      {
+        "id": "sc-personalization",
+        "description": "Every drafted email references a specific verified detail about the lead's company",
+        "metric": "emails_personalized",
+        "target": "true",
+        "weight": 0.30,
+        "met": false
+      },
+      {
+        "id": "sc-queue-delivered",
+        "description": "User receives a downloadable HTML report with all drafted emails",
+        "metric": "queue_delivered",
+        "target": "true",
+        "weight": 0.25,
+        "met": false
+      }
+    ],
+    "constraints": [
+      {
+        "id": "c-no-fabrication",
+        "description": "Never fabricate leads, email addresses, or company details — only report what was found from real sources",
+        "constraint_type": "hard",
+        "category": "quality",
+        "check": ""
+      },
+      {
+        "id": "c-quota-cap",
+        "description": "Respect the daily quota — never exceed 50 emails per run",
+        "constraint_type": "hard",
+        "category": "scope",
+        "check": ""
+      },
+      {
+        "id": "c-no-send",
+        "description": "Never send any email — only draft for human review",
+        "constraint_type": "hard",
+        "category": "safety",
+        "check": ""
+      },
+      {
+        "id": "c-professional-tone",
+        "description": "All drafted emails must be professional, genuine, and under 120 words",
+        "constraint_type": "soft",
+        "category": "quality",
+        "check": ""
+      }
+    ],
+    "context": {},
+    "required_capabilities": [],
+    "input_schema": {},
+    "output_schema": {},
+    "version": "1.0.0",
+    "parent_version": null,
+    "evolution_reason": null,
+    "created_at": "2026-03-25 13:39:11.000000",
+    "updated_at": "2026-03-25 13:39:11.000000"
+  },
+  "required_tools": [
+    "exa_search",
+    "exa_get_contents",
+    "save_data",
+    "append_data",
+    "load_data",
+    "serve_file_to_user"
+  ],
+  "metadata": {
+    "created_at": "2026-03-25T13:39:11.000000",
+    "node_count": 5,
+    "edge_count": 4
+  }
+}
