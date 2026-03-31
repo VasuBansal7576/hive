@@ -30,9 +30,7 @@ def _client_input_counts_as_planning_ask(event: Any) -> bool:
         return True
     if not data.get("auto_blocked"):
         return False
-    requires_input = data.get("assistant_text_requires_input")
-    if requires_input is None:
-        requires_input = bool(data.get("assistant_text_present") and data.get("prompt"))
+    requires_input = data.get("assistant_text_requires_input", False)
     return bool(requires_input)
 
 
