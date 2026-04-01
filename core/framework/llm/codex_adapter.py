@@ -108,10 +108,15 @@ class CodexResponsesAdapter:
         system_messages: list[dict[str, Any]] = []
         if system:
             chunks = self.chunk_system_prompt(system)
-            if len(chunks) > 1 or len(chunks[0]) > _CODEX_SYSTEM_CHUNK_CHARS:
-                system_messages.append({"role": "system", "content": _CODEX_SYSTEM_PREAMBLE})
-            for chunk in chunks:
-                system_messages.append({"role": "system", "content": chunk})
+            if chunks:
+                if len(chunks) > 1 or len(chunks[0]) > _CODEX_SYSTEM_CHUNK_CHARS:
+                    system_messages.append({"role": "system", "content": _CODEX_SYSTEM_PREAMBLE})
+                for chunk in chunks:
+                    system_messages.append({"role": "system", "content": chunk})
+            else:
+                system_messages.append(
+                    {"role": "system", "content": "You are a helpful assistant."}
+                )
         else:
             system_messages.append({"role": "system", "content": "You are a helpful assistant."})
 

@@ -24,7 +24,7 @@ def is_codex_api_base(api_base: str | None) -> bool:
     parsed = urlparse(api_base)
     path = parsed.path.rstrip("/")
     return (
-        parsed.scheme in {"http", "https"}
+        parsed.scheme == "https"
         and parsed.hostname == _CODEX_HOST
         and (path == _CODEX_PATH or path == f"{_CODEX_PATH}/responses")
     )

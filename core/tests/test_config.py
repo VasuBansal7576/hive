@@ -115,6 +115,7 @@ class TestCodexConfig:
     def test_codex_api_base_detection_requires_real_chatgpt_origin(self):
         assert is_codex_api_base("https://chatgpt.com/backend-api/codex")
         assert is_codex_api_base("https://chatgpt.com/backend-api/codex/responses")
+        assert not is_codex_api_base("http://chatgpt.com/backend-api/codex")
         assert not is_codex_api_base(
             "https://proxy.example/v1?target=https://chatgpt.com/backend-api/codex"
         )

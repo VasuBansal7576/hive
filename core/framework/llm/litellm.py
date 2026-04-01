@@ -16,6 +16,7 @@ import os
 import re
 import time
 from collections.abc import AsyncIterator
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -557,18 +558,6 @@ class LiteLLMProvider(LLMProvider):
                 "LiteLLM is not installed. Please install it with: uv pip install litellm"
             )
 
-        # The Codex ChatGPT backend is a Responses API endpoint at
-        # chatgpt.com/backend-api/codex/responses.  LiteLLM's model registry
-        # marks legacy codex models (gpt-5.3-codex) with mode="responses",
-        # but newer models like gpt-5.4 default to mode="chat".  Force
-        # mode="responses" so litellm routes through the responses_api_bridge.
-        if self._codex_backend and litellm is not None:
-            _strip = self.model.removeprefix("openai/")
-            _entry = litellm.model_cost.get(_strip, {})
-            if _entry.get("mode") != "responses":
-                litellm.model_cost.setdefault(_strip, {})
-                litellm.model_cost[_strip]["mode"] = "responses"
-
     @staticmethod
     def _default_api_base_for_model(model: str) -> str | None:
         """Return provider-specific default API base when required."""
@@ -591,6 +580,33 @@ class LiteLLMProvider(LLMProvider):
     def _chunk_codex_system_prompt(self, system: str) -> list[str]:
         """Break large system prompts into smaller Codex-friendly chunks."""
         return self._codex_adapter.chunk_system_prompt(system)
+
+    @contextmanager
+    def _codex_responses_mode_override(self, model: str | None = None):
+        """Temporarily route Codex requests through LiteLLM's Responses bridge."""
+        if not self._codex_backend or litellm is None:
+            yield
+            return
+
+        stripped_model = (model or self.model).removeprefix("openai/")
+        previous_entry = litellm.model_cost.get(stripped_model)
+        previous_mode = previous_entry.get("mode") if isinstance(previous_entry, dict) else None
+        if previous_mode == "responses":
+            yield
+            return
+
+        if previous_entry is None:
+            litellm.model_cost[stripped_model] = {"mode": "responses"}
+        else:
+            litellm.model_cost[stripped_model] = {**previous_entry, "mode": "responses"}
+
+        try:
+            yield
+        finally:
+            if previous_entry is None:
+                litellm.model_cost.pop(stripped_model, None)
+            else:
+                litellm.model_cost[stripped_model] = previous_entry
 
     def _build_request_messages(
         self,
@@ -719,7 +735,8 @@ class LiteLLMProvider(LLMProvider):
         retries = max_retries if max_retries is not None else RATE_LIMIT_MAX_RETRIES
         for attempt in range(retries + 1):
             try:
-                response = litellm.completion(**kwargs)  # type: ignore[union-attr]
+                with self._codex_responses_mode_override(model):
+                    response = litellm.completion(**kwargs)  # type: ignore[union-attr]
 
                 # Some providers (e.g. Gemini) return 200 with empty content on
                 # rate limit / quota exhaustion instead of a proper 429.  Treat
@@ -899,7 +916,8 @@ class LiteLLMProvider(LLMProvider):
         retries = max_retries if max_retries is not None else RATE_LIMIT_MAX_RETRIES
         for attempt in range(retries + 1):
             try:
-                response = await litellm.acompletion(**kwargs)  # type: ignore[union-attr]
+                with self._codex_responses_mode_override(model):
+                    response = await litellm.acompletion(**kwargs)  # type: ignore[union-attr]
 
                 content = response.choices[0].message.content if response.choices else None
                 has_tool_calls = bool(response.choices and response.choices[0].message.tool_calls)
@@ -1824,10 +1842,15 @@ class LiteLLMProvider(LLMProvider):
         """Try a non-stream completion when Codex returns an empty stream."""
         if not self._codex_backend:
             return None
+
+        async def _codex_acompletion(**fallback_kwargs: Any) -> Any:
+            with self._codex_responses_mode_override(fallback_kwargs.get("model")):
+                return await litellm.acompletion(**fallback_kwargs)  # type: ignore[union-attr]
+
         return await self._codex_adapter.recover_empty_stream(
             kwargs,
             last_role=last_role,
-            acompletion=litellm.acompletion,  # type: ignore[union-attr]
+            acompletion=_codex_acompletion,
         )
 
     def _merge_tool_call_chunk(
@@ -1914,7 +1937,8 @@ class LiteLLMProvider(LLMProvider):
             stream_finish_reason: str | None = None
 
             try:
-                response = await litellm.acompletion(**kwargs)  # type: ignore[union-attr]
+                with self._codex_responses_mode_override(kwargs.get("model")):
+                    response = await litellm.acompletion(**kwargs)  # type: ignore[union-attr]
 
                 async for chunk in response:
                     # Capture usage from the trailing usage-only chunk that

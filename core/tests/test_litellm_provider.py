@@ -918,8 +918,8 @@ class TestCodexEmptyStreamRecovery:
 
 
 class TestCodexRequestHardening:
-    def test_codex_backend_forces_responses_mode_for_newer_models(self):
-        """Codex backend should force LiteLLM through the Responses bridge."""
+    def test_codex_backend_forces_responses_mode_per_request(self):
+        """Codex backend should scope the Responses override to the active request."""
         import litellm
 
         original = litellm.model_cost.get("gpt-5.4")
@@ -932,7 +932,27 @@ class TestCodexRequestHardening:
                 api_base="https://chatgpt.com/backend-api/codex",
             )
             assert provider._codex_backend is True
-            assert litellm.model_cost["gpt-5.4"]["mode"] == "responses"
+
+            async def _fake_acompletion(**kwargs):
+                assert kwargs["model"] == "openai/gpt-5.4"
+                assert litellm.model_cost["gpt-5.4"]["mode"] == "responses"
+                response = MagicMock()
+                response.choices = [MagicMock()]
+                response.choices[0].message.content = "ok"
+                response.choices[0].message.tool_calls = []
+                response.choices[0].finish_reason = "stop"
+                return response
+
+            with patch("litellm.acompletion", new=_fake_acompletion):
+                response = asyncio.run(
+                    provider._acompletion_with_rate_limit_retry(
+                        model=provider.model,
+                        messages=[{"role": "user", "content": "hi"}],
+                    )
+                )
+
+            assert response.choices[0].message.content == "ok"
+            assert litellm.model_cost["gpt-5.4"]["mode"] == "chat"
         finally:
             if original is None:
                 litellm.model_cost.pop("gpt-5.4", None)
@@ -972,6 +992,18 @@ class TestCodexRequestHardening:
         assert "stream_options" not in kwargs
         assert kwargs["api_base"] == "https://chatgpt.com/backend-api/codex"
         assert "store" in kwargs["allowed_openai_params"]
+
+    def test_codex_build_system_messages_handles_whitespace_only_prompt(self):
+        """Whitespace-only system prompts should fall back to the default prompt."""
+        provider = LiteLLMProvider(
+            model="openai/gpt-5.4",
+            api_key="test-key",
+            api_base="https://chatgpt.com/backend-api/codex",
+        )
+
+        messages = provider._codex_adapter.build_system_messages("\n   \n", json_mode=False)
+
+        assert messages == [{"role": "system", "content": "You are a helpful assistant."}]
 
     def test_codex_merge_tool_call_chunk_handles_parallel_calls_with_broken_indexes(self):
         """Codex chunk merging should survive index=0 for multiple parallel tool calls."""
