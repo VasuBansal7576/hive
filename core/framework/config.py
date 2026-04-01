@@ -413,6 +413,8 @@ def get_llm_extra_kwargs() -> dict[str, Any]:
             except ImportError:
                 pass
             return build_codex_litellm_kwargs(api_key, account_id=account_id)
+    if llm.get("provider") == "ollama":
+        return {"num_ctx": llm.get("num_ctx", 16384)}
     return {}
 
 
